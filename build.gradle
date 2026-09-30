@@ -1,0 +1,100 @@
+// Root build script. Mirrors upstream Lootr's structure: loader plugins are
+// declared here with `apply false` (so their versions live in one place and
+// each subproject just "applies" the one it needs), and shared config that
+// would otherwise be duplicated across neoforge/build.gradle and
+// fabric/build.gradle is centralized in `subprojects { }` below.
+//
+// Unlike upstream, there is no `common` subproject: this project has no
+// shared code between loaders yet. If/when Lootr-equivalent logic needs to
+// be shared, a `common` module can be added the same way upstream does it
+// (a plain `java-library` subproject that neoforge/ and fabric/ both
+// `compileOnly(project(':common'))` against).
+plugins {
+    id 'idea'
+    id 'maven-publish'
+    id 'net.neoforged.moddev' version '2.0.80' apply false
+    id 'fabric-loom' version '1.14.3' apply false
+}
+
+def javaVersion = 21
+
+allprojects {
+    version = "${mod_version}"
+    group = "${mod_group_id}"
+
+    repositories {
+        mavenCentral()
+    }
+}
+
+subprojects {
+    apply plugin: 'java-library'
+    apply plugin: 'maven-publish'
+
+    base {
+        archivesName = "${mod_id}-${project.name}"
+    }
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(javaVersion)
+        }
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.release = javaVersion
+    }
+
+    // Replace tokens in mods.toml / fabric.mod.json / pack.mcmeta at build
+    // time. Centralized here so both loader subprojects expand the exact
+    // same set of properties from the same source of truth
+    // (root gradle.properties), instead of each maintaining its own
+    // slightly-different copy of this block.
+    //
+    // minecraft_version_range vs fabric_minecraft_version_range are
+    // DELIBERATELY separate properties, not a shared one: NeoForge's
+    // neoforge.mods.toml uses Maven-style interval syntax (e.g. `[1.21.1]`),
+    // while Fabric Loader's fabric.mod.json parses its own SemVer-superset
+    // syntax (e.g. `~1.21.1`) and outright rejects bracket notation. Feeding
+    // the NeoForge-syntax value into fabric.mod.json's "minecraft" depends
+    // entry previously caused runServer to fail on the Fabric side with a
+    // confusing "requires version [1.21.1] ... but only the wrong version
+    // is present: 1.21.1!" error - Fabric Loader was failing to PARSE the
+    // range, not reporting a genuine mismatch. Keep using the matching
+    // property for each loader's own file; don't consolidate these back
+    // into one without also reconciling the syntax difference.
+    tasks.withType(ProcessResources).configureEach {
+        var replaceProperties = [
+                minecraft_version             : minecraft_version,
+                minecraft_version_range       : minecraft_version_range,
+                fabric_minecraft_version_range: fabric_minecraft_version_range,
+                neoforge_version              : neoforge_version,
+                loader_version_range          : loader_version_range,
+                fabric_loader_version         : fabric_loader_version,
+                fabric_loader_version_range   : fabric_loader_version_range,
+                mod_id                        : mod_id,
+                mod_name                      : mod_name,
+                mod_license                   : mod_license,
+                mod_version                   : mod_version,
+                mod_authors                   : mod_authors,
+                mod_description               : mod_description,
+        ]
+        inputs.properties replaceProperties
+        filesMatching(['META-INF/neoforge.mods.toml', 'fabric.mod.json', 'pack.mcmeta']) {
+            expand replaceProperties + [project: project]
+        }
+    }
+
+    publishing {
+        publications {
+            register('mavenJava', MavenPublication) {
+                from components.java
+            }
+        }
+        repositories {
+            maven {
+                url "file://${project.projectDir}/repo"
+            }
+        }
+    }
+}
