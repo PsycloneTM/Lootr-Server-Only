@@ -33,7 +33,7 @@ chest.
 | Chest minecart | Their own loot in a chest menu |
 | Decorated pot | Their own loot straight into their inventory; the pot stays |
 | Suspicious sand / gravel | Their own archaeology loot when they finish brushing; the block stays |
-| Item frame | One copy of the framed item, once (frames must be marked, see [Item frames](docs/FEATURES.md#item-frames)) |
+| Item frame | One copy of the framed item, once (frames must be marked, see [Item frames](../../wiki/Features-in-detail#item-frames)) |
 
 Also included:
 
@@ -92,7 +92,7 @@ The options most servers touch:
 | `disable` | `false` | Master off switch; everything reverts to vanilla |
 
 Everything else, with all keys, defaults and the exact break rules, is in
-[docs/CONFIGURATION.md](docs/CONFIGURATION.md).
+[Configuration](../../wiki/Configuration).
 
 ## Commands
 
@@ -108,7 +108,7 @@ Everything else, with all keys, defaults and the exact break rules, is in
 | `/lootr force_chunk\|force_radius\|force_all` | Run the chunk discovery scan for decay/refresh on demand |
 | `/lootr reload` | Fabric only: re-read the config file |
 
-Full details in [docs/COMMANDS.md](docs/COMMANDS.md).
+Full details in [Commands](../../wiki/Commands).
 
 ## Known limitations
 
@@ -126,7 +126,7 @@ Features added since then (background refresh and decay sweeps, add-on API,
 spawn and `open_as` commands, minecart break rules, and others) are written and
 checked against the 1.21.1 sources but have had limited in-game testing. Bug
 reports are welcome. See
-[Verification status](docs/DEVELOPMENT.md#verification-status) for the full list
+[Verification status](../../wiki/Development-notes#verification-status) for the full list
 and a quick test for each.
 
 ## Building from source
@@ -146,13 +146,15 @@ Jars are written to `neoforge/build/libs/` and `fabric/build/libs/`.
 
 ## Documentation
 
+Full docs are in the [wiki](../../wiki):
+
 | Document | Contents |
 |---|---|
-| [docs/FEATURES.md](docs/FEATURES.md) | How each object behaves, protection, break rules, item frames, advancements |
-| [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | Every config key with defaults |
-| [docs/COMMANDS.md](docs/COMMANDS.md) | Every `/lootr` command |
-| [docs/ADDON_API.md](docs/ADDON_API.md) | Loot filters, listeners and the `LootrAPI` facade |
-| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Project layout, mixins, verification status, implementation notes |
+| [Features in detail](../../wiki/Features-in-detail) | How each object behaves, protection, break rules, item frames, advancements |
+| [Configuration](../../wiki/Configuration) | Every config key with defaults |
+| [Commands](../../wiki/Commands) | Every `/lootr` command |
+| [Add-on API](../../wiki/Add-on-API) | Loot filters, listeners and the `LootrAPI` facade |
+| [Development notes](../../wiki/Development-notes) | Project layout, mixins, verification status, implementation notes |
 | [LOOTR_SERVER_ONLY_DESIGN.md](LOOTR_SERVER_ONLY_DESIGN.md) | Design rationale and migration plan |
 
 ## Credits and license
