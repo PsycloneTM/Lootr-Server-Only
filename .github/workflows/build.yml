@@ -44,3 +44,4 @@ steps:
         !fabric/build/libs/*-dev.jar
         !neoforge/build/libs/*-sources.jar
         !neoforge/build/libs/*-dev.jar
+```
