@@ -1,5 +1,6 @@
 package net.lootr.serveronly.interaction;
 
+import net.lootr.serveronly.api.LootListeners;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.ShulkerBoxBlock;
 import net.minecraft.world.entity.monster.piglin.PiglinAi;
@@ -115,9 +116,16 @@ public final class ContainerInteractionHandler {
         if (!vanillaWouldOpen(level.getBlockState(pos), level, pos, be)) {
             return; // blocked chest / obstructed shulker: let vanilla refuse
         }
+        if (!container.canOpen(serverPlayer)) {
+            // Locked (a /data merge Lock, or a LOCK component): vanilla's own menu path would refuse, but this
+            // handler replaces that path. canOpen has already shown "is locked" and played the lock sound.
+            event.setCanceled(true);
+            return;
+        }
         event.setCanceled(true);
-        openChestLikeMenu(serverPlayer, container, level, menu, kind);
-        afterOpen(serverPlayer, kind);
+        if (openChestLikeMenu(serverPlayer, container, level, menu, kind)) {
+            afterOpen(serverPlayer, kind);
+        }
     }
 
     @SubscribeEvent
@@ -130,16 +138,29 @@ public final class ContainerInteractionHandler {
     /** Which vanilla menu factory to hand the {@link PlayerScopedContainer} to. */
     private enum SimpleMenuProviderKind { CHEST_MENU, SHULKER_MENU }
 
-    private static void openChestLikeMenu(ServerPlayer player, RandomizableContainerBlockEntity entity,
+    /** @return false if the container decayed instead of opening (nothing was opened). */
+    private static boolean openChestLikeMenu(ServerPlayer player, RandomizableContainerBlockEntity entity,
                                            ServerLevel level, SimpleMenuProviderKind kind,
                                            OpenedAdvancements.Kind advancement) {
         LootrLootState state = entity.getData(ModAttachments.LOOT_STATE);
         java.util.UUID lootKey = TeamResolver.resolve(player);
-        if (state.refreshIfDue(level.getGameTime(), LootrConfig.REFRESH_TICKS.get())) {
+        if (Refresh.refreshIfDue(level, entity, state, LootrConfig.refreshTicksFor(level, entity.getBlockPos(), entity.getLootTable()))) {
             entity.setChanged();
+            Refresh.notifyRefreshed(level, entity);
+        }
+        // Past its deadline (e.g. looted before decay was enabled): it decays instead of opening.
+        if (Decay.decayIfDue(level, entity, state)) {
+            return false;
         }
         boolean firstOpenForPlayer = !state.hasGeneratedFor(lootKey);
         generateLootIfNeeded(player, lootKey, entity, state, level);
+        if (state.getFirstGeneratedGameTime() >= 0) {
+            Decay.track(level, entity); // also picks up containers looted before decay existed
+            Refresh.track(level, entity);
+            if (firstOpenForPlayer) {
+                Decay.announce(player, state, entity.getBlockPos(), entity.getLootTable(), level.getGameTime());
+            }
+        }
         if (firstOpenForPlayer && state.hasGeneratedFor(lootKey)) {
             // Only fire once per player per container, matching upstream's
             // ILootrInfoProvider.performTrigger (hasServerOpened check) -
@@ -157,7 +178,7 @@ public final class ContainerInteractionHandler {
                 p -> net.minecraft.world.Container.stillValidBlockEntity(entity, p),
                 // Lid / door animation, sounds, barrel state, trapped-chest redstone.
                 p -> OpenTracker.opened(level, entity.getBlockPos(), p),
-                p -> OpenTracker.closed(level, entity.getBlockPos(), p));
+                p -> OpenTracker.closed(level, entity.getBlockPos(), p)).owner(entity);
 
         player.openMenu(new SimpleMenuProvider(
                 (containerId, inventory, p) -> switch (kind) {
@@ -166,6 +187,7 @@ public final class ContainerInteractionHandler {
                 },
                 entity.getDisplayName()
         ));
+        return true;
     }
 
     private static void generateLootIfNeeded(ServerPlayer player, java.util.UUID lootKey,
@@ -179,22 +201,24 @@ public final class ContainerInteractionHandler {
             return;
         }
         LootTable lootTable = level.getServer().reloadableRegistries().getLootTable(lootTableKey);
+        UnresolvedTables.check(player, lootTableKey, lootTable);
+        LootRoller.triggerGenerateLoot(player, lootTableKey);
         LootParams params = new LootParams.Builder(level)
                 .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(entity.getBlockPos()))
                 .withOptionalParameter(LootContextParams.THIS_ENTITY, player)
                 .withLuck(player.getLuck())
                 .create(LootContextParamSets.CHEST);
 
-        NonNullList<ItemStack> generated = NonNullList.create();
-        generated.addAll(lootTable.getRandomItems(params));
-
-        NonNullList<ItemStack> sized = NonNullList.withSize(state.getContainerSize(), ItemStack.EMPTY);
-        for (int i = 0; i < generated.size() && i < sized.size(); i++) {
-            sized.set(i, generated.get(i));
-        }
+        // Vanilla's own fill: items scatter across the whole inventory like a real chest,
+        // and the container's loot seed is used only if randomise_seed is off. See LootRoller.
+        NonNullList<ItemStack> sized = LootRoller.rollInto(
+                lootTable, params, entity.getLootTableSeed(), state.getContainerSize());
         state.setContents(lootKey, sized);
         state.markFirstGeneratedIfAbsent(level.getGameTime());
         entity.setChanged();
+        Decay.track(level, entity);
+        Refresh.track(level, entity);
+        LootListeners.looted(level, entity, entity.getBlockPos(), player, lootTableKey);
     }
 
     /**
@@ -229,8 +253,9 @@ public final class ContainerInteractionHandler {
                                                       ServerLevel level) {
         LootrLootState state = entity.getData(ModAttachments.LOOT_STATE);
         java.util.UUID lootKey = TeamResolver.resolve(player);
-        if (state.refreshIfDue(level.getGameTime(), LootrConfig.REFRESH_TICKS.get())) {
+        if (Refresh.refreshIfDue(level, entity, state, LootrConfig.refreshTicksFor(level, entity.getBlockPos(), entity.getLootTable()))) {
             entity.setChanged();
+            Refresh.notifyRefreshed(level, entity);
         }
         generateLootIfNeeded(player, lootKey, entity, state, level);
 

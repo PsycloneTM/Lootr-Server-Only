@@ -26,6 +26,7 @@ import net.lootr.serveronly.registry.ModAttachments;
 @Mod(LootrServerOnly.MOD_ID)
 public class LootrServerOnly {
     public static final String MOD_ID = "lootr_serveronly";
+    public static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger(MOD_ID);
 
     public LootrServerOnly(IEventBus modBus, ModContainer container) {
         container.registerConfig(ModConfig.Type.COMMON, LootrConfig.SPEC);

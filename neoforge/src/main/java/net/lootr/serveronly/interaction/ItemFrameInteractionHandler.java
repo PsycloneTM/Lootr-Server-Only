@@ -140,7 +140,7 @@ public final class ItemFrameInteractionHandler {
         // Covers marked frames AND loot chest minecarts; see
         // ContainerProtection.isManagedEntity. A creative player's own hit is
         // let through so an admin can still remove one.
-        if (!event.getSource().isCreativePlayer() && ContainerProtection.isManagedEntity(event.getEntity())) {
+        if (!event.getSource().isCreativePlayer() && ContainerProtection.isManagedEntity(event.getEntity(), event.getSource())) {
             event.setInvulnerable(true);
         }
     }
@@ -173,6 +173,10 @@ public final class ItemFrameInteractionHandler {
 
         ItemStack copy = framed.copyWithCount(1);
         player.getInventory().placeItemBackInInventory(copy);
+
+        // Keep the shared server-side frame item intact for everyone else,
+        // but hide the item in this player's client view just like upstream Lootr.
+        ItemFrameVisualSync.sendHiddenItem(player, frame);
 
         frame.playSound(frame.getRemoveItemSound(), 1.0F, 1.0F);
         OpenedAdvancements.award(player, OpenedAdvancements.Kind.ITEM_FRAME);

@@ -1,9 +1,7 @@
 package net.lootr.serveronly.config;
 
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.scores.Team;
 
-import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 /**
@@ -17,11 +15,7 @@ public final class TeamResolver {
         if (!LootrConfig.TEAM_LOOT.get()) {
             return player.getUUID();
         }
-        Team team = player.getTeam();
-        if (team == null) {
-            return player.getUUID();
-        }
-        return UUID.nameUUIDFromBytes(("lootr_serveronly:team:" + team.getName()).getBytes(StandardCharsets.UTF_8));
+        return TeamResolvers.resolveFor(player);
     }
 
     private TeamResolver() {}

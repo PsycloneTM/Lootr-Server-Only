@@ -4,13 +4,22 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "AccessorItemFrame",
+    "MixinEntity",
     "AccessorBrushableBlockEntity",
     "MixinDecoratedPotBlock",
     "MixinRandomizableContainerBlockEntity",
+    "MixinAbstractMinecartContainer",
+    "MixinAbstractContainerMenu",
     "MixinBrushableBlockEntity",
     "MixinChestBlockEntity",
     "MixinEndCityPiece",
-    "MixinStructureTemplate"
+    "MixinStructureTemplate",
+    "MixinServerGamePacketListenerImpl",
+    "MixinBrushableBlock",
+    "MixinItemFrame",
+    "MixinExplosionDamageCalculator",
+    "MixinEntitySelector",
+    "MixinHopperBlockEntity"
   ],
   "injectors": {
     "defaultRequire": 1

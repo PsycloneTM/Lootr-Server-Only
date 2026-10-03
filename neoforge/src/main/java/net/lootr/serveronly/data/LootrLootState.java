@@ -31,6 +31,7 @@ public final class LootrLootState {
     private static final String TAG_PLAYER_LOOT = "LootrPlayerLoot";
     private static final String TAG_PLAYER_ID = "Player";
     private static final String TAG_ITEMS = "Items";
+    private static final String TAG_GENERATION = "Gen";
     private static final String TAG_FIRST_GENERATED_GAME_TIME = "LootrFirstGeneratedGameTime";
 
     /** Stable identity for this specific block/container instance. */
@@ -38,6 +39,13 @@ public final class LootrLootState {
 
     /** Per-player generated contents. Populated lazily, on first open. */
     private final Map<UUID, NonNullList<ItemStack>> perPlayerContents = new HashMap<>();
+
+    /**
+     * The {@link PlayerClears} generation each entry above was written under (missing = 0). An
+     * entry whose generation is behind its key's current one was cleared with {@code /lootr clear}
+     * and counts as if it were not there; it is overwritten the next time that key loots here.
+     */
+    private final Map<UUID, Integer> entryGeneration = new HashMap<>();
 
     private final int containerSize;
 
@@ -50,18 +58,10 @@ public final class LootrLootState {
      * clears every player's stored contents / opener record) on one shared
      * timer, not a separate timer per player. See {@link #refreshIfDue}.
      * <p>
-     * Deliberately simpler than upstream's own refresh implementation:
-     * upstream runs a server-wide tick scheduler ({@code NewTickingData})
-     * that proactively refreshes containers in the background and can spawn
-     * "refresh particles" on containers a player currently has open. This
-     * version checks lazily, only at open-time (see
-     * {@code ContainerInteractionHandler}) - functionally equivalent for
-     * "does this container have fresh loot the next time someone opens it,
-     * N ticks after it was first looted", but with no ambient/background
-     * behavior and no particle warning. That trade-off is deliberate scope
-     * control (see design doc §6/§8.3) - a full tick-scheduled refresh with
-     * particle warnings can be added later without changing this field's
-     * meaning.
+     * The timer is checked when a player opens the container and by a
+     * background sweep (see {@code Refresh}); a container someone has open is
+     * never reset under them. Upstream's refresh particles are not reproduced
+     * (there is no client mod to draw them).
      */
     private long firstGeneratedGameTime = -1;
 
@@ -80,17 +80,25 @@ public final class LootrLootState {
         return containerSize;
     }
 
+    /** True if this entry has not been invalidated by {@code /lootr clear}. */
+    private boolean isCurrent(UUID playerId) {
+        return entryGeneration.getOrDefault(playerId, 0) == PlayerClears.generation(playerId);
+    }
+
     public boolean hasGeneratedFor(UUID playerId) {
-        return perPlayerContents.containsKey(playerId);
+        return perPlayerContents.containsKey(playerId) && isCurrent(playerId);
     }
 
     public NonNullList<ItemStack> getOrCreateContents(UUID playerId, java.util.function.Supplier<NonNullList<ItemStack>> generator) {
-        return perPlayerContents.computeIfAbsent(playerId, id -> generator.get());
+        if (!hasGeneratedFor(playerId)) {
+            setContents(playerId, generator.get());
+        }
+        return perPlayerContents.get(playerId);
     }
 
     public NonNullList<ItemStack> getContentsOrEmpty(UUID playerId) {
         NonNullList<ItemStack> contents = perPlayerContents.get(playerId);
-        if (contents == null) {
+        if (contents == null || !isCurrent(playerId)) {
             return NonNullList.withSize(containerSize, ItemStack.EMPTY);
         }
         return contents;
@@ -98,6 +106,7 @@ public final class LootrLootState {
 
     public void setContents(UUID playerId, NonNullList<ItemStack> contents) {
         perPlayerContents.put(playerId, contents);
+        entryGeneration.put(playerId, PlayerClears.generation(playerId));
     }
 
     /**
@@ -110,6 +119,12 @@ public final class LootrLootState {
         if (firstGeneratedGameTime < 0) {
             firstGeneratedGameTime = gameTime;
         }
+    }
+
+    /** True if a refresh would reset this container right now (without resetting it). */
+    public boolean refreshDue(long currentGameTime, long refreshTicks) {
+        return refreshTicks > 0 && firstGeneratedGameTime >= 0
+                && currentGameTime - firstGeneratedGameTime >= refreshTicks;
     }
 
     /**
@@ -135,18 +150,33 @@ public final class LootrLootState {
             return false;
         }
         perPlayerContents.clear();
+        entryGeneration.clear();
         firstGeneratedGameTime = -1;
         return true;
     }
 
-    /** How many players (or teams) have a loot entry here, including "already took it" markers. */
+    /**
+     * How many players (or teams) have a loot entry here, including "already took it" markers.
+     * Entries wiped by {@code /lootr clear} are not counted.
+     */
     public int lootedCount() {
-        return perPlayerContents.size();
+        int count = 0;
+        for (UUID id : perPlayerContents.keySet()) {
+            if (isCurrent(id)) {
+                count++;
+            }
+        }
+        return count;
     }
 
     /** Game time of the first generation, or -1 if nothing has been generated (or it was reset). */
     public long getFirstGeneratedGameTime() {
         return firstGeneratedGameTime;
+    }
+
+    /** Moves the shared refresh/decay timer. Intended for the administrative commands only. */
+    public void setFirstGeneratedGameTime(long gameTime) {
+        firstGeneratedGameTime = gameTime;
     }
 
     /**
@@ -159,12 +189,14 @@ public final class LootrLootState {
     public boolean resetAll() {
         boolean hadAnything = !perPlayerContents.isEmpty() || firstGeneratedGameTime >= 0;
         perPlayerContents.clear();
+        entryGeneration.clear();
         firstGeneratedGameTime = -1;
         return hadAnything;
     }
 
     public void load(CompoundTag tag, HolderLookup.Provider provider) {
         perPlayerContents.clear();
+        entryGeneration.clear();
         firstGeneratedGameTime = tag.contains(TAG_FIRST_GENERATED_GAME_TIME)
                 ? tag.getLong(TAG_FIRST_GENERATED_GAME_TIME)
                 : -1;
@@ -178,6 +210,9 @@ public final class LootrLootState {
                 NonNullList<ItemStack> items = NonNullList.withSize(containerSize, ItemStack.EMPTY);
                 ContainerHelper.loadAllItems(entry.getCompound(TAG_ITEMS), items, provider);
                 perPlayerContents.put(playerId, items);
+                if (entry.contains(TAG_GENERATION)) {
+                    entryGeneration.put(playerId, entry.getInt(TAG_GENERATION));
+                }
             }
         }
     }
@@ -194,6 +229,7 @@ public final class LootrLootState {
             CompoundTag itemsTag = new CompoundTag();
             ContainerHelper.saveAllItems(itemsTag, entry.getValue(), provider);
             entryTag.put(TAG_ITEMS, itemsTag);
+            entryTag.putInt(TAG_GENERATION, entryGeneration.getOrDefault(entry.getKey(), 0));
             list.add(entryTag);
         }
         tag.put(TAG_PLAYER_LOOT, list);
