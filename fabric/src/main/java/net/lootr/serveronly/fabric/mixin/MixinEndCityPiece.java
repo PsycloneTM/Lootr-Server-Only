@@ -33,6 +33,9 @@ public class MixinEndCityPiece {
             at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/ServerLevelAccessor;addFreshEntity(Lnet/minecraft/world/entity/Entity;)Z"))
     private boolean lootr$markElytraItemFrame(ServerLevelAccessor level, Entity entity, Operation<Boolean> original) {
         if (entity instanceof ItemFrame frame) {
+            if (ItemFrameMarker.convertElytraToChest(level, frame)) {
+                return true; // a chest replaced the frame; vanilla's frame is never added
+            }
             ItemFrameMarker.onEndCityElytraFrameSpawned(frame);
         }
         return original.call(level, entity);

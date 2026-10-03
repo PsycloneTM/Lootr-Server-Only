@@ -1,5 +1,6 @@
 package net.lootr.serveronly.fabric.interaction;
 
+import net.lootr.serveronly.fabric.api.LootListeners;
 import net.lootr.serveronly.fabric.registry.ModLootTags;
 import net.lootr.serveronly.fabric.advancement.OpenedAdvancements;
 import net.lootr.serveronly.fabric.config.LootrConfig;
@@ -60,7 +61,7 @@ public final class BrushableLoot {
             return false;
         }
         ServerLevel level = (ServerLevel) be.getLevel();
-        if (stateOf(be, level).hasGeneratedFor(TeamResolver.resolve(sp))) {
+        if (stateOf(be, level, lootTable).hasGeneratedFor(TeamResolver.resolve(sp))) {
             sp.displayClientMessage(Component.literal("You have already searched this block."), true);
             return true;
         }
@@ -73,22 +74,25 @@ public final class BrushableLoot {
             return;
         }
         BlockPos pos = be.getBlockPos();
-        LootrLootState state = stateOf(be, level);
+        LootrLootState state = stateOf(be, level, tableKey);
         UUID lootKey = TeamResolver.resolve(sp);
 
         if (!state.hasGeneratedFor(lootKey)) {
             LootTable table = level.getServer().reloadableRegistries().getLootTable(tableKey);
+            UnresolvedTables.check(sp, tableKey, table);
+            LootRoller.triggerGenerateLoot(sp, tableKey);
             LootParams params = new LootParams.Builder(level)
                     .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(pos))
                     .withParameter(LootContextParams.THIS_ENTITY, sp)
                     .withLuck(sp.getLuck())
                     .create(LootContextParamSets.CHEST);
-            List<ItemStack> loot = table.getRandomItems(params);
+            List<ItemStack> loot = LootRoller.roll(table, params, 0L);
 
             // Mark as looted before handing anything out so a failure can never allow a second roll.
             state.setContents(lootKey, NonNullList.withSize(state.getContainerSize(), ItemStack.EMPTY));
             state.markFirstGeneratedIfAbsent(level.getGameTime());
             persist(be, state, level);
+            LootListeners.looted(level, be, pos, sp, tableKey);
 
             for (ItemStack stack : loot) {
                 if (!stack.isEmpty()) {
@@ -105,12 +109,13 @@ public final class BrushableLoot {
         }
     }
 
-    private static LootrLootState stateOf(BrushableBlockEntity be, ServerLevel level) {
+    private static LootrLootState stateOf(BrushableBlockEntity be, ServerLevel level, ResourceKey<LootTable> table) {
         HolderLookup.Provider provider = level.registryAccess();
         LootrLootState state = new LootrLootState(27);
         state.load(be.getAttachedOrElse(ModAttachments.LOOT_STATE, new CompoundTag()), provider);
-        if (state.refreshIfDue(level.getGameTime(), LootrConfig.refreshTicks())) {
+        if (state.refreshIfDue(level.getGameTime(), LootrConfig.refreshTicksFor(level, be.getBlockPos(), table))) {
             persist(be, state, level);
+            Refresh.notifyRefreshed(level, be);
         }
         return state;
     }

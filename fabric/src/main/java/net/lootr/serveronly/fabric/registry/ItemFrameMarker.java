@@ -75,7 +75,7 @@ public final class ItemFrameMarker {
      * not in the world yet, so nothing else can see it half-configured.
      */
     public static void onStructureFrameSpawned(ItemFrame frame) {
-        if (LootrConfig.convertItemFrames() && isEligibleStructureFrame(frame)) {
+        if (!LootrConfig.isDisabled() && LootrConfig.convertItemFrames() && isEligibleStructureFrame(frame)) {
             mark(frame);
         }
     }
@@ -87,7 +87,7 @@ public final class ItemFrameMarker {
      * might spawn.
      */
     public static void onEndCityElytraFrameSpawned(ItemFrame frame) {
-        if (LootrConfig.convertElytrasToItemFrames() && frame.getItem().is(Items.ELYTRA)) {
+        if (!LootrConfig.isDisabled() && LootrConfig.convertElytrasToItemFrames() && frame.getItem().is(Items.ELYTRA)) {
             mark(frame);
         }
     }
@@ -131,6 +131,31 @@ public final class ItemFrameMarker {
     /** Removes the marker. Anyone who already took a copy keeps having taken it. */
     public static void unmark(ItemFrame frame) {
         frame.removeTag(TAG);
+    }
+
+    /** The chest an Elytra frame becomes under {@code convert_elytras_to_chests}: one table, one Elytra. */
+    public static final net.minecraft.resources.ResourceKey<net.minecraft.world.level.storage.loot.LootTable> ELYTRA_CHEST_TABLE =
+            net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.LOOT_TABLE,
+                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("lootr_serveronly", "chests/end_city_elytra"));
+
+    /**
+     * {@code convert_elytras_to_chests}: replaces the End City Elytra frame with a chest one block below it, facing the
+     * way the frame did, holding {@link #ELYTRA_CHEST_TABLE}. The chest has a loot table, so it then loots per player
+     * like any other. Frames take priority (as upstream): this does nothing while convert_elytras_to_item_frames is on.
+     * Returns true if the chest was placed, in which case the caller must not add the frame.
+     */
+    public static boolean convertElytraToChest(net.minecraft.world.level.ServerLevelAccessor level, ItemFrame frame) {
+        if (LootrConfig.isDisabled() || !LootrConfig.convertElytrasToChests() || LootrConfig.convertElytrasToItemFrames()
+                || !frame.getItem().is(Items.ELYTRA)) {
+            return false;
+        }
+        net.minecraft.core.BlockPos chestPos = frame.getPos().below();
+        level.setBlock(chestPos, net.minecraft.world.level.block.Blocks.CHEST.defaultBlockState()
+                .setValue(net.minecraft.world.level.block.ChestBlock.FACING, frame.getDirection()), 3);
+        if (level.getBlockEntity(chestPos) instanceof net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity chest) {
+            chest.setLootTable(ELYTRA_CHEST_TABLE, level.getRandom().nextLong());
+        }
+        return true;
     }
 
     private ItemFrameMarker() {}

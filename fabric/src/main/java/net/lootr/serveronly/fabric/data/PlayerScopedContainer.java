@@ -34,6 +34,7 @@ public class PlayerScopedContainer implements Container {
     private final Predicate<Player> stillValid;
     private final Consumer<Player> onOpen;
     private final Consumer<Player> onClose;
+    private Object owner;
     private final NonNullList<ItemStack> live;
 
     public PlayerScopedContainer(LootrLootState state, UUID playerId, Consumer<NonNullList<ItemStack>> onChanged,
@@ -112,6 +113,16 @@ public class PlayerScopedContainer implements Container {
         // closed their menu the instant it opened; with team loot off it was always
         // true, so nothing ever checked range or that the chest still existed.
         return stillValid.test(player);
+    }
+
+    /** Tags this view with the block entity / entity it belongs to (used by decay to see who has it open). */
+    public PlayerScopedContainer owner(Object owner) {
+        this.owner = owner;
+        return this;
+    }
+
+    public Object getOwner() {
+        return owner;
     }
 
     @Override

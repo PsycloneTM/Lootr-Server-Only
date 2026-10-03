@@ -142,6 +142,10 @@ public final class ItemFrameInteractionHandler {
 
         player.getInventory().placeItemBackInInventory(framed.copyWithCount(1));
 
+        // Keep the shared server-side frame item intact for everyone else,
+        // but hide the item in this player's client view just like upstream Lootr.
+        ItemFrameVisualSync.sendHiddenItem(player, frame);
+
         frame.playSound(frame.getRemoveItemSound(), 1.0F, 1.0F);
         OpenedAdvancements.award(player, OpenedAdvancements.Kind.ITEM_FRAME);
     }

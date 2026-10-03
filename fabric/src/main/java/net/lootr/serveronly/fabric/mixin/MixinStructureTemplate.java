@@ -1,5 +1,8 @@
 package net.lootr.serveronly.fabric.mixin;
 
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.core.HolderLookup;
+import net.lootr.serveronly.fabric.data.LootStateStripper;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.lootr.serveronly.fabric.registry.ItemFrameMarker;
@@ -54,5 +57,31 @@ public class MixinStructureTemplate {
             });
         }
         return created;
+    }
+
+    /**
+     * Structure saving: a looted container saved into a structure must not carry this mod's per-player state
+     * into every copy. See {@link LootStateStripper}. The loot table stays so the copy is a loot container again.
+     */
+    @WrapOperation(
+            method = "fillFromWorld",
+            at = @At(value = "INVOKE",
+                    target = "Lnet/minecraft/world/level/block/entity/BlockEntity;saveWithId(Lnet/minecraft/core/HolderLookup$Provider;)Lnet/minecraft/nbt/CompoundTag;"))
+    private CompoundTag lootr$stripBlockEntityLootState(BlockEntity blockEntity, HolderLookup.Provider provider,
+                                                        Operation<CompoundTag> original) {
+        CompoundTag saved = original.call(blockEntity, provider);
+        LootStateStripper.strip(saved);
+        return saved;
+    }
+
+    /** Same for entities saved into a template (a chest minecart's looted state, an item frame's takers). */
+    @WrapOperation(
+            method = "fillEntityList",
+            at = @At(value = "INVOKE",
+                    target = "Lnet/minecraft/world/entity/Entity;save(Lnet/minecraft/nbt/CompoundTag;)Z"))
+    private boolean lootr$stripEntityLootState(Entity entity, CompoundTag tag, Operation<Boolean> original) {
+        boolean result = original.call(entity, tag);
+        LootStateStripper.strip(tag);
+        return result;
     }
 }

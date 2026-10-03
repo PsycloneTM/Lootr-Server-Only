@@ -1,5 +1,6 @@
 package net.lootr.serveronly.fabric.interaction;
 
+import net.lootr.serveronly.fabric.api.LootListeners;
 import net.lootr.serveronly.fabric.registry.ModLootTags;
 import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
@@ -126,8 +127,9 @@ public final class PotInteractionHandler {
         state.load(stored, provider);
 
         UUID lootKey = TeamResolver.resolve(player);
-        if (state.refreshIfDue(level.getGameTime(), LootrConfig.refreshTicks())) {
+        if (state.refreshIfDue(level.getGameTime(), LootrConfig.refreshTicksFor(level, pot.getBlockPos(), pot.getLootTable()))) {
             persist(pot, state, provider);
+            Refresh.notifyRefreshed(level, pot);
         }
 
         if (state.hasGeneratedFor(lootKey)) {
@@ -141,18 +143,21 @@ public final class PotInteractionHandler {
             return; // cannot happen after lootPotAt, but never NPE on a server thread
         }
         LootTable table = level.getServer().reloadableRegistries().getLootTable(tableKey);
+        UnresolvedTables.check(player, tableKey, table);
+        LootRoller.triggerGenerateLoot(player, tableKey);
         LootParams params = new LootParams.Builder(level)
                 .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(pos))
                 .withOptionalParameter(LootContextParams.THIS_ENTITY, player)
                 .withLuck(player.getLuck())
                 .create(LootContextParamSets.CHEST);
-        List<ItemStack> loot = table.getRandomItems(params);
+        List<ItemStack> loot = LootRoller.roll(table, params, pot.getLootTableSeed());
 
         // Record "looted" before handing anything out. An all-empty entry is
         // the marker; LootrLootState keeps it and saves it like any other.
         state.setContents(lootKey, NonNullList.withSize(state.getContainerSize(), ItemStack.EMPTY));
         state.markFirstGeneratedIfAbsent(level.getGameTime());
         persist(pot, state, provider);
+        LootListeners.looted(level, pot, pos, player, tableKey);
 
         for (ItemStack stack : loot) {
             if (!stack.isEmpty()) {

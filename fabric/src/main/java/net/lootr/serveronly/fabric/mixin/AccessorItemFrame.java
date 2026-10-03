@@ -14,4 +14,9 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 public interface AccessorItemFrame {
     @Accessor("fixed")
     boolean lootr$isFixed();
+
+    @Accessor("DATA_ITEM")
+    static net.minecraft.network.syncher.EntityDataAccessor<net.minecraft.world.item.ItemStack> lootr$getDataItem() {
+        throw new UnsupportedOperationException();
+    }
 }

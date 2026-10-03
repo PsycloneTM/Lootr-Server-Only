@@ -32,17 +32,12 @@ loom {
     // No splitEnvironmentSourceSets() — there is intentionally no client
     // source set here, mirroring the NeoForge side having no client run.
 
-    mixin {
-        // Must match "refmap" in lootr_serveronly.mixins.json. Loom's default is
-        // "<archivesName>-refmap.json", and root build.gradle sets archivesName to
-        // "${mod_id}-${project.name}", i.e. "lootr_serveronly-fabric-refmap.json" -
-        // which does NOT match, so the refmap was never found ("Reference map ...
-        // could not be read" in the dev log). That is harmless in a dev run, where
-        // names are already readable, but on a real Fabric server (intermediary
-        // names) the mixins' method/field targets would not be remapped and would
-        // fail to apply.
-        defaultRefmapName = "lootr_serveronly.refmap.json"
-    }
+    // No `mixin { ... }` block on purpose. In current Loom (1.14.3 here) the mixin annotation processor is off by
+    // default and no refmap is generated: Loom remaps the mixins' targets inside the jar instead (Fabric wiki,
+    // "Mixins and Obfuscation"). The old defaultRefmapName setting is therefore dead config, and Loom prints "the
+    // mixin annotation is no longer enabled by default, you should remove any loom.mixin configuration" while it exists.
+    // If a production server ever fails to apply a mixin that works in runServer, set
+    // `mixin { useLegacyMixinAp = true }` here and put the "refmap" entry back in lootr_serveronly.mixins.json.
 }
 
 dependencies {

@@ -1,6 +1,5 @@
 package net.lootr.serveronly.fabric.mixin;
 
-import net.lootr.serveronly.fabric.config.LootrConfig;
 import net.lootr.serveronly.fabric.interaction.ContainerProtection;
 import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.Level;
@@ -23,8 +22,9 @@ public abstract class MixinExplosion {
 
     @Inject(method = "finalizeExplosion", at = @At("HEAD"))
     private void lootr$sparseLootContainers(boolean spawnParticles, CallbackInfo ci) {
-        if (LootrConfig.protectContainers()) {
-            ((Explosion) (Object) this).getToBlow().removeIf(pos -> ContainerProtection.isManagedAt(this.level, pos));
+        Explosion self = (Explosion) (Object) this;
+        if (ContainerProtection.blastSpares()) {
+            self.getToBlow().removeIf(pos -> ContainerProtection.isManagedAt(this.level, pos));
         }
     }
 }
