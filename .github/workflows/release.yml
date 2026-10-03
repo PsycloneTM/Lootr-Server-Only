@@ -93,3 +93,4 @@ steps:
         --title "v$VERSION" \
         --generate-notes \
         "${FLAGS[@]}"
+```
