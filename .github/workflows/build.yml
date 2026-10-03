@@ -27,22 +27,20 @@ jobs:
       - name: build
         run: ./gradlew build
 
-      - name: upload fabric artifacts
-        if: ${{ matrix.java == '21' }}
-        uses: actions/upload-artifact@v4
+      - name: upload fabric jar
+        uses: actions/upload-artifact@v7
         with:
-          artifact: false
+          archive: false
           path: |
             fabric/build/libs/*.jar
             !fabric/build/libs/*-sources.jar
             !fabric/build/libs/*-dev.jar
           if-no-files-found: error
 
-      - name: upload neoforge artifacts
-        if: ${{ matrix.java == '21' }}
-        uses: actions/upload-artifact@v4
+      - name: upload neoforge jar
+        uses: actions/upload-artifact@v7
         with:
-          artifact: false
+          archive: false
           path: |
             neoforge/build/libs/*.jar
             !neoforge/build/libs/*-sources.jar
