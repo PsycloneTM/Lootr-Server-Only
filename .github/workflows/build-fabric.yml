@@ -1,4 +1,4 @@
-name: build
+name: build-fabric
 on: [pull_request, push]
 
 jobs:
@@ -27,13 +27,8 @@ jobs:
         if: ${{ matrix.java == '21' }}
         uses: actions/upload-artifact@v7
         with:
-          name: lootr-serveronly-builds
-          archive: true
-          if-no-files-found: error
+          archive: false
           path: |
             fabric/build/libs/*.jar
-            neoforge/build/libs/*.jar
             !fabric/build/libs/*-sources.jar
             !fabric/build/libs/*-dev.jar
-            !neoforge/build/libs/*-sources.jar
-            !neoforge/build/libs/*-dev.jar
