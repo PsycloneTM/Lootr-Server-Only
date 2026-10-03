@@ -190,6 +190,11 @@ public final class ContainerProtection {
                 && ModLootTags.isTableEnabled(cart.getLootTable());
     }
 
+    /** Predicate for {@code MixinEntitySelector}: false for a managed loot cart, so hoppers never see it. */
+    public static boolean isNotManagedCart(Entity entity) {
+        return !(entity instanceof AbstractMinecartContainer cart && blocksCartUnpack(cart));
+    }
+
     /** Resistance {@code blast_resistant} gives a managed container; upstream's value. */
     public static final float BLAST_RESISTANT_RESISTANCE = 16.0F;
 
