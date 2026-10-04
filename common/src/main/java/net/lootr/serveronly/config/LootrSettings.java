@@ -2,17 +2,8 @@ package net.lootr.serveronly.config;
 
 import java.util.List;
 
-/**
- * Loader-independent view of the few config values that code in {@code common} needs
- * (COMMON_MODULE_PLAN.md section 4A). {@code LootrConfig} lives in each loader module (NeoForge's
- * {@code ModConfigSpec} versus Fabric's JSON file), so {@code common} cannot call it. Each loader's
- * {@code LootrConfig.installSettings()} passes a {@link Source} that reads that loader's own config on every
- * call; the entry point calls it first. A getter used before {@link #install} throws, so a wiring mistake is
- * not mistaken for "config ignored". Add one getter here (and to both sources) whenever a further file moves.
- */
 public final class LootrSettings {
 
-    /** What a loader must provide. Implementations must read the live config on every call. */
     public interface Source {
         boolean teamLoot();
 

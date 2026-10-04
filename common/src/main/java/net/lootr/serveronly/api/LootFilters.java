@@ -16,22 +16,12 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-/**
- * Registry for {@link LootFilter}s. With none registered (the default) loot rolling is exactly as it was: every
- * entry point checks {@link #isEmpty()} first. A filter that throws is skipped for that roll and logged once, so a
- * broken add-on cannot stop players from looting.
- */
 public final class LootFilters {
     private static final Logger LOG = LoggerFactory.getLogger("lootr_serveronly");
     private static final List<LootFilter> FILTERS = new CopyOnWriteArrayList<>();
     private static final Set<String> FAILED = ConcurrentHashMap.newKeySet();
     private static volatile boolean servicesLoaded = false;
 
-    /**
-     * Finds filters listed in {@code META-INF/services/<this package>.LootFilter} (the server-only counterpart of
-     * upstream's {@code ILootrFilterProvider} service file), once, the first time filters are asked for. The class
-     * needs a public no-argument constructor.
-     */
     private static void loadServices() {
         if (servicesLoaded) {
             return;
@@ -51,10 +41,9 @@ public final class LootFilters {
         }
     }
 
-    /** Adds a filter; call from your mod's initializer. */
     public static void register(LootFilter filter) {
         FILTERS.add(filter);
-        FILTERS.sort(Comparator.comparingInt(LootFilter::priority)); // stable: ties keep registration order
+        FILTERS.sort(Comparator.comparingInt(LootFilter::priority));
     }
 
     public static void unregister(LootFilter filter) {
@@ -66,7 +55,6 @@ public final class LootFilters {
         return FILTERS.isEmpty();
     }
 
-    /** Runs every filter over {@code items} (for rolls that hand stacks straight to the player). */
     public static void apply(List<ItemStack> items, LootTable table, LootParams params) {
         LootFilter.Context context = new LootFilter.Context(params.getLevel(),
                 params.getOptionalParameter(LootContextParams.THIS_ENTITY), table, params.getLevel().getRandom());
@@ -84,10 +72,6 @@ public final class LootFilters {
         }
     }
 
-    /**
-     * Runs the filters over an already-placed inventory. Surviving stacks keep their slots, in order; stacks a filter
-     * added go into random free slots, the way vanilla scatters loot; anything that no longer fits is dropped.
-     */
     public static NonNullList<ItemStack> applyToInventory(NonNullList<ItemStack> inventory, LootTable table, LootParams params) {
         List<Integer> slots = new ArrayList<>();
         List<ItemStack> items = new ArrayList<>();

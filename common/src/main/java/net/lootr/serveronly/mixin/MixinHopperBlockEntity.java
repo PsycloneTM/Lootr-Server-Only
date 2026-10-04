@@ -10,16 +10,6 @@ import net.minecraft.world.level.block.entity.HopperBlockEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 
-/**
- * The second half of the hopper-versus-loot-cart defense, matching upstream Lootr's
- * {@code MixinHopperBlockEntity.getEntityContainer} wrapper.
- * <p>
- * {@code MixinEntitySelector} already keeps a managed loot cart out of the candidate list. This is the
- * backstop for anything that still returns one (another mod replacing the selector, say): a managed cart is
- * treated as "no container here". It also stops a {@code ClassCastException} from another mod that lets a
- * non-{@code Container} entity into the selector from crashing the block tick; that is logged once and the
- * hopper treats it as no container. Not verified by a build.
- */
 @Mixin(HopperBlockEntity.class)
 public abstract class MixinHopperBlockEntity {
     @Unique

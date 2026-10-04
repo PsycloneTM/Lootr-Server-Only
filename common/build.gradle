@@ -1,6 +1,3 @@
-// Shared, loader-independent code. Compiles against vanilla Minecraft (Mojang names) only: no NeoForge or Fabric
-// API. NeoForge's moddev plugin has a vanilla-only mode (neoFormVersion instead of version), which is how upstream
-// Lootr's own common module is built. Not verified by a build: check neoform_version in gradle.properties first.
 plugins {
     id 'net.neoforged.moddev'
 }
@@ -14,9 +11,7 @@ repositories {
 }
 
 dependencies {
-    // For the shared mixin classes (plan section 2). compileOnly: each loader supplies Mixin at runtime.
     compileOnly "org.spongepowered:mixin:0.8.5"
     compileOnly "io.github.llamalad7:mixinextras-common:${mixin_extras_version}"
-    // @Nullable; each loader supplies it at runtime.
     compileOnly "org.jetbrains:annotations:24.1.0"
 }

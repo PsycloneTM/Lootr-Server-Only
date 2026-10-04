@@ -7,10 +7,6 @@ import net.minecraft.nbt.LongArrayTag;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.saveddata.SavedData;
 
-/**
- * One saved file holding the tracked positions of one 32x32-chunk region of one dimension, for one tracker
- * (decay or refresh). See {@link PositionTracker}. Not verified by a build.
- */
 public final class TrackerShard extends SavedData {
 
     private static final String TAG_POSITIONS = "positions";
@@ -18,7 +14,6 @@ public final class TrackerShard extends SavedData {
     private static final String TAG_GENERATION = "generation";
 
     public final DueIndex index = new DueIndex(TrackerShard::chunkKey);
-    /** The {@link TrackerIndex#generation} this shard's hints were last brought up to date with. */
     public int generation;
 
     public static long chunkKey(long packedPos) {
@@ -39,7 +34,6 @@ public final class TrackerShard extends SavedData {
         long[] positions = tag.getLongArray(TAG_POSITIONS);
         long[] dues = tag.getLongArray(TAG_DUES);
         for (int i = 0; i < positions.length; i++) {
-            // A missing/short dues array just means "check now", which is always safe.
             shard.index.put(positions[i], i < dues.length ? dues[i] : 0L);
         }
         shard.generation = tag.getInt(TAG_GENERATION);

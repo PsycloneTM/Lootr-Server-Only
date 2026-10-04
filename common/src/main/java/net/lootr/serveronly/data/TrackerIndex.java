@@ -10,15 +10,6 @@ import net.minecraft.world.level.saveddata.SavedData;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Small saved file listing, per dimension, which regions have a {@link TrackerShard} with entries and the
- * earliest hint in each. It is what lets a sweep skip every region with nothing due without loading that
- * region's shard. Its size grows with the number of regions, not the number of containers.
- * <p>
- * {@code generation} / {@code setting} exist so a changed timer setting (decay_value / refresh_value) can make
- * every hint "check now" without loading every shard: bump the generation, zero these minimums, and each
- * shard resyncs itself the first time it is loaded. Not verified by a build.
- */
 public final class TrackerIndex extends SavedData {
 
     private static final String TAG_DIMENSIONS = "dimensions";
@@ -28,7 +19,6 @@ public final class TrackerIndex extends SavedData {
     private static final String TAG_GENERATION = "generation";
     private static final String TAG_SETTING = "setting";
 
-    /** dimension id -> (region key -> earliest hint in that region's shard). */
     public final Map<String, Map<Long, Long>> regions = new HashMap<>();
     public int generation;
     public long setting = Long.MIN_VALUE;

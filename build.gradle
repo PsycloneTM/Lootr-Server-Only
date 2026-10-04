@@ -1,11 +1,3 @@
-// Root build script. Mirrors upstream Lootr's structure: loader plugins are
-// declared here with `apply false` (so their versions live in one place and
-// each subproject just "applies" the one it needs), and shared config that
-// would otherwise be duplicated across neoforge/build.gradle and
-// fabric/build.gradle is centralized in `subprojects { }` below.
-//
-// `common` holds loader-independent code (see COMMON_MODULE_PLAN.md). neoforge/ and fabric/ compile against it and
-// bundle its classes into their own jars.
 plugins {
     id 'idea'
     id 'maven-publish'
@@ -42,24 +34,6 @@ subprojects {
         options.release = javaVersion
     }
 
-    // Replace tokens in mods.toml / fabric.mod.json / pack.mcmeta at build
-    // time. Centralized here so both loader subprojects expand the exact
-    // same set of properties from the same source of truth
-    // (root gradle.properties), instead of each maintaining its own
-    // slightly-different copy of this block.
-    //
-    // minecraft_version_range vs fabric_minecraft_version_range are
-    // DELIBERATELY separate properties, not a shared one: NeoForge's
-    // neoforge.mods.toml uses Maven-style interval syntax (e.g. `[1.21.1]`),
-    // while Fabric Loader's fabric.mod.json parses its own SemVer-superset
-    // syntax (e.g. `~1.21.1`) and outright rejects bracket notation. Feeding
-    // the NeoForge-syntax value into fabric.mod.json's "minecraft" depends
-    // entry previously caused runServer to fail on the Fabric side with a
-    // confusing "requires version [1.21.1] ... but only the wrong version
-    // is present: 1.21.1!" error - Fabric Loader was failing to PARSE the
-    // range, not reporting a genuine mismatch. Keep using the matching
-    // property for each loader's own file; don't consolidate these back
-    // into one without also reconciling the syntax difference.
     tasks.withType(ProcessResources).configureEach {
         var replaceProperties = [
                 minecraft_version             : minecraft_version,

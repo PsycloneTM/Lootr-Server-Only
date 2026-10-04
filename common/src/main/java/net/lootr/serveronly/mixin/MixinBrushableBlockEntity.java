@@ -14,20 +14,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/**
- * Per-player brushable loot; see {@code BrushableLoot}. Three hooks on
- * vanilla's {@code BrushableBlockEntity}:
- * <ul>
- *   <li>{@code brush}: players who already looted the block make no progress.</li>
- *   <li>{@code unpackLootTable}: cancelled for managed blocks so vanilla never
- *       rolls the shared item nor clears the loot table (it must survive for
- *       the next player).</li>
- *   <li>{@code brushingCompleted}: replaced, so the block is never turned into
- *       sand/gravel and the loot goes to the brusher only.</li>
- * </ul>
- * All three target named methods and private fields; a wrong name fails at
- * startup ({@code defaultRequire = 1}). Not verified by a build.
- */
 @Mixin(BrushableBlockEntity.class)
 public abstract class MixinBrushableBlockEntity {
 

@@ -17,34 +17,6 @@ import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
-/**
- * Where the decay and refresh sweeps keep the block positions they should look at: the shared implementation
- * behind {@link DecayTracker} and {@link RefreshTracker}.
- * <p>
- * Compared with the old single set per dimension:
- * <ul>
- *     <li><b>Sharded.</b> Positions live in one {@link TrackerShard} file per 32x32-chunk region, so no single
- *     file or in-memory collection holds the whole server's tracked set, and a change only dirties its own
- *     region's file.</li>
- *     <li><b>Due-ordered.</b> Each position carries a "check at game time T" hint kept in a sorted structure
- *     ({@link DueIndex}). A sweep takes only the entries whose hint has arrived; entries far from their
- *     deadline cost nothing per sweep. A small {@link TrackerIndex} records each region's earliest hint, so a
- *     sweep does not even load the shards of regions with nothing due.</li>
- *     <li><b>Timer model untouched.</b> The hint is only a lower bound on when to look. The authoritative
- *     deadline is still the container's own {@code firstGeneratedGameTime} plus the configured ticks, and the
- *     sweep recomputes it from there on every look.</li>
- * </ul>
- * The sweep protocol is: {@link #takeDue} removes the due entries; for each one the sweep either lets it go
- * (nothing left to track) or hands it back with {@link #schedule}.
- * <p>
- * Hints are only ever allowed to be too early, never too late. Two things could make one too late, and both
- * are handled: a timer setting changed ({@link #syncSetting}), and a position that was deferred because its
- * chunk was not loaded ({@link #wakeChunk}, called when that chunk loads).
- * <p>
- * Shards are {@link SavedData}, which vanilla keeps cached once loaded, so a region touched during a session
- * stays in memory until shutdown. What this bounds is the per-sweep work and the size of any one file, not
- * resident memory for regions that were touched. Not verified by a build.
- */
 public final class PositionTracker {
 
     private final DimensionDataStorage storage;
@@ -58,17 +30,11 @@ public final class PositionTracker {
         migrateLegacy(legacyName);
     }
 
-    // The one place the loaders differ: plain Mojang-mapped vanilla's Factory takes a third DataFixTypes argument
-    // (NeoForge's patched copy has a two-argument constructor). LEVEL is safe: these files are written with the
-    // current data version, so the fixer is a no-op, as for the old single-file trackers.
     private static <T extends SavedData> SavedData.Factory<T> factory(Supplier<T> constructor,
                                                                    BiFunction<CompoundTag, HolderLookup.Provider, T> loader) {
         return new SavedData.Factory<>(constructor, loader, DataFixTypes.LEVEL);
     }
 
-    // ---- public API (what the trackers' callers use) --------------------------
-
-    /** Tracks a position, to be looked at on the next sweep. @return true if it was not already tracked. */
     public boolean add(ResourceKey<Level> dimension, BlockPos pos) {
         return add(dimension, pos.asLong(), 0L);
     }
@@ -86,10 +52,6 @@ public final class PositionTracker {
         }
     }
 
-    /**
-     * Removes and returns every tracked position in {@code dimension} whose hint is at or before {@code now}.
-     * Whatever the caller still wants tracked must be handed back with {@link #schedule}.
-     */
     public List<BlockPos> takeDue(ResourceKey<Level> dimension, long now) {
         Map<Long, Long> regions = index.regions.get(id(dimension));
         List<BlockPos> out = new ArrayList<>();
@@ -116,7 +78,6 @@ public final class PositionTracker {
         return out;
     }
 
-    /** Tracks {@code pos} (adding it if it was just taken) and says not to look before game time {@code due}. */
     public void schedule(ResourceKey<Level> dimension, BlockPos pos, long due) {
         long packed = pos.asLong();
         long region = regionOf(packed);
@@ -126,11 +87,6 @@ public final class PositionTracker {
         updateIndex(dimension, region, shard);
     }
 
-    /**
-     * A chunk just loaded: anything tracked in it that was deferred while it was unloaded becomes due now, so a
-     * container that expired meanwhile is handled on the next sweep, as before. Cheap when nothing in the
-     * region is tracked (no shard is loaded).
-     */
     public void wakeChunk(ResourceKey<Level> dimension, int chunkX, int chunkZ, long now) {
         long region = regionKey(chunkX >> 5, chunkZ >> 5);
         if (!hasRegion(dimension, region)) {
@@ -143,11 +99,6 @@ public final class PositionTracker {
         }
     }
 
-    /**
-     * Call each sweep with the timer setting the hints depend on ({@code decay_value} / {@code refresh_value}).
-     * If it changed since last time, every hint may now be too late, so all are made due. Does not load shards:
-     * they resync as they are next used.
-     */
     public void syncSetting(long setting) {
         if (index.setting == setting) {
             return;
@@ -159,8 +110,6 @@ public final class PositionTracker {
         }
         index.setDirty();
     }
-
-    // ---- internals -------------------------------------------------------------
 
     private boolean add(ResourceKey<Level> dimension, long packed, long due) {
         long region = regionOf(packed);
@@ -178,7 +127,6 @@ public final class PositionTracker {
         return regions != null && regions.containsKey(region);
     }
 
-    /** Loads (or creates) a region's shard, first catching its hints up with any setting change. */
     private TrackerShard shard(ResourceKey<Level> dimension, long region) {
         String name = prefix + "_" + fileSafe(dimension) + "_" + (int) (region >> 32) + "_" + (int) region;
         TrackerShard shard = storage.computeIfAbsent(factory(TrackerShard::new, TrackerShard::load), name);
@@ -212,7 +160,6 @@ public final class PositionTracker {
         }
     }
 
-    /** Moves an old single-file tracker's positions into shards, once, then leaves that file empty. */
     private void migrateLegacy(String legacyName) {
         LegacyPositions legacy = storage.computeIfAbsent(factory(LegacyPositions::new, LegacyPositions::load), legacyName);
         if (legacy.positions.isEmpty()) {
@@ -225,7 +172,7 @@ public final class PositionTracker {
             }
             ResourceKey<Level> dimension = ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, loc);
             for (long packed : e.getValue()) {
-                add(dimension, packed, 0L); // no deadline known: look at it on the next sweep, which sets one
+                add(dimension, packed, 0L);
             }
         }
         legacy.positions.clear();

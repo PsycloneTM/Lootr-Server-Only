@@ -31,32 +31,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * Drives the lid / door animation, open and close sounds, barrel "open"
- * blockstate and trapped-chest redstone for loot containers.
- * <p>
- * Why this exists: vanilla does all of that inside {@code startOpen/stopOpen}
- * on the real block entity, but loot containers hand the player a
- * {@code PlayerScopedContainer} instead, so vanilla never hears about the open.
- * Calling the real {@code startOpen} is not an option for chests and barrels:
- * their {@code ContainerOpenersCounter} re-counts openers every 5 ticks by asking
- * "is this player's menu backed by THIS block entity?", our container is not, so
- * the count would fall to 0 (lid snaps shut) and later go negative (lid never
- * opens again). So this class keeps its own per-block opener set and sends the
- * same public block event vanilla does ({@code blockEvent(pos, block, 1, count)}),
- * which is what the client's lid/door animation listens to.
- * <p>
- * Openers who log out with a menu open are dropped by {@link #forget} (vanilla
- * closes their menu without telling us) and by pruning on every open/close.
- * Double chests: both halves are signalled. Not verified by a build.
- */
 public final class OpenTracker {
 
     private record Key(ResourceKey<Level> dimension, BlockPos pos) {}
 
     private static final Map<Key, Set<UUID>> OPENERS = new HashMap<>();
 
-    /** A player's loot menu for the container at {@code pos} just opened. */
     public static void opened(ServerLevel level, BlockPos pos, Player player) {
         if (player.isSpectator()) {
             return;
@@ -68,7 +48,6 @@ public final class OpenTracker {
         apply(level, pos, before, set.size());
     }
 
-    /** A player's loot menu for the container at {@code pos} just closed. */
     public static void closed(ServerLevel level, BlockPos pos, Player player) {
         Key key = new Key(level.dimension(), pos.immutable());
         Set<UUID> set = OPENERS.get(key);
@@ -84,13 +63,11 @@ public final class OpenTracker {
         apply(level, pos, before, set.size());
     }
 
-    /** Current number of loot-menu openers; used by the trapped chest redstone mixin. */
     public static int count(Level level, BlockPos pos) {
         Set<UUID> set = OPENERS.get(new Key(level.dimension(), pos));
         return set == null ? 0 : set.size();
     }
 
-    /** A player left the server: close every container they were recorded as viewing. */
     public static void forget(ServerPlayer player) {
         MinecraftServer server = player.server;
         List<Key> touched = new ArrayList<>();
@@ -191,7 +168,6 @@ public final class OpenTracker {
 
     private static void applyShulker(ServerLevel level, BlockPos pos, BlockState state, int before, int after) {
         if (before != after) {
-            // Also drives the SERVER-side animation status that vanilla's canOpen reads.
             level.blockEvent(pos, state.getBlock(), 1, after);
         }
         if (before == 0 && after > 0) {

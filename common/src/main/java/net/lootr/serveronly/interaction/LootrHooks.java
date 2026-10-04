@@ -18,20 +18,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/**
- * What the shared mixins in {@code common} ask the loader-side code (COMMON_MODULE_PLAN.md section 4E). The answers
- * live in each loader's {@code ContainerProtection} and {@code BrushableLoot}, which read the loader's own attachment
- * storage and cannot move. Each loader's {@code ContainerProtection.installHooks()} passes a {@link Provider}; the
- * entry point calls it first.
- * <p>
- * Unlike {@code LootrSettings}, a call before {@link #install} does not throw: these run inside vanilla methods
- * (item access, explosions, hoppers) and throwing there would crash the game. Nothing is managed before the mod has
- * initialised, so the neutral answer (not managed, vanilla behaviour) is correct, and one error is logged so a wiring
- * mistake is not silent.
- */
 public final class LootrHooks {
 
-    /** What a loader must provide. Implementations may be called very often (every item access): keep them cheap. */
     public interface Provider {
         boolean blocksUnpack(RandomizableContainerBlockEntity container);
 
@@ -59,7 +47,6 @@ public final class LootrHooks {
         provider = installed;
     }
 
-    /** The installed provider, or null (after logging once) if the entry point has not installed one. */
     @Nullable
     private static Provider provider() {
         Provider current = provider;
@@ -85,7 +72,6 @@ public final class LootrHooks {
         return p != null && p.isClearingCartTable();
     }
 
-    /** True for everything except a managed loot cart; appended to {@code EntitySelector.CONTAINER_ENTITY_SELECTOR}. */
     public static boolean isNotManagedCart(Entity entity) {
         return !(entity instanceof AbstractMinecartContainer cart && blocksCartUnpack(cart));
     }

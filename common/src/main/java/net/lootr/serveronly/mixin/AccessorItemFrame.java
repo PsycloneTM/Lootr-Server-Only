@@ -4,11 +4,6 @@ import net.minecraft.world.entity.decoration.ItemFrame;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-/**
- * Exposes {@code ItemFrame#fixed}, which is not public. Accessor interfaces
- * are the one kind of mixin class that ordinary code may reference (by
- * casting), which is how {@code ItemFrameMarker} uses it.
- */
 @Mixin(ItemFrame.class)
 public interface AccessorItemFrame {
     @Accessor("fixed")

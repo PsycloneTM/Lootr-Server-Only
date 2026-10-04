@@ -14,19 +14,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.Optional;
 
-/**
- * {@code blast_resistant}, matching upstream Lootr: while the option is on, a managed loot container
- * counts as having a blast resistance of 16 for the explosion's own ray calculation.
- * <p>
- * Upstream gets this by overriding {@code Block.getExplosionResistance} on its custom blocks. This mod keeps
- * vanilla's blocks, so the same number is substituted where vanilla asks for it: the per-block resistance
- * lookup that every ray goes through. Rays therefore lose strength against the container exactly as they
- * would upstream (it also shields what is behind it), and it is destroyed only by a ray strong enough to beat
- * resistance 16, instead of by a flat explosion-power cutoff.
- * <p>
- * Overrides that do not call super (the wind charge calculator, which destroys no blocks) are unaffected.
- * Not verified by a build.
- */
 @Mixin(ExplosionDamageCalculator.class)
 public abstract class MixinExplosionDamageCalculator {
     @Inject(method = "getBlockExplosionResistance", at = @At("RETURN"), cancellable = true)

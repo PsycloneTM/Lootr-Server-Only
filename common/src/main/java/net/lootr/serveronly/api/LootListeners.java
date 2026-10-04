@@ -17,29 +17,21 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-/**
- * Registry for {@link LootListener}s. With none registered (the default) every call below is a cheap no-op. Listeners
- * come from {@link #register} and from {@link ServiceLoader} ({@code META-INF/services/net.lootr.serveronly.api.LootListener}), the
- * latter looked up once, the first time an event fires. A listener that throws is skipped for that event and logged once
- * under its {@link LootListener#name()}, so a broken add-on cannot stop players from looting.
- */
 public final class LootListeners {
     private static final Logger LOG = LoggerFactory.getLogger("lootr_serveronly");
     private static final List<LootListener> LISTENERS = new CopyOnWriteArrayList<>();
     private static final Set<String> FAILED = ConcurrentHashMap.newKeySet();
     private static volatile boolean servicesLoaded = false;
 
-    /** Adds a listener; call from your mod's initializer. */
     public static void register(LootListener listener) {
         LISTENERS.add(listener);
-        LISTENERS.sort(Comparator.comparingInt(LootListener::priority)); // stable: ties keep registration order
+        LISTENERS.sort(Comparator.comparingInt(LootListener::priority));
     }
 
     public static void unregister(LootListener listener) {
         LISTENERS.remove(listener);
     }
 
-    /** Called by the mod when a player's loot was rolled. */
     public static void looted(ServerLevel level, Object holder, BlockPos pos, ServerPlayer looter,
                               @Nullable ResourceKey<LootTable> table) {
         loadServices();
@@ -55,7 +47,6 @@ public final class LootListeners {
         }
     }
 
-    /** Called by the mod just before a container decays. */
     public static void decaying(ServerLevel level, Object holder, BlockPos pos, @Nullable ResourceKey<LootTable> table) {
         loadServices();
         if (LISTENERS.isEmpty() || table == null) {
@@ -70,7 +61,6 @@ public final class LootListeners {
         }
     }
 
-    /** Called by the mod immediately after a successful refresh. */
     public static void refreshed(ServerLevel level, Object holder, BlockPos pos, @Nullable ResourceKey<LootTable> table) {
         loadServices();
         if (LISTENERS.isEmpty() || table == null) {

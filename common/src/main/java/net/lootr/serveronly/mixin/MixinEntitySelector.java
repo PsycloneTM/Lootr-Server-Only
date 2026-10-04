@@ -13,14 +13,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.function.Predicate;
 
-/**
- * Keeps a managed loot chest minecart out of hopper candidacy.
- * <p>
- * {@code HopperBlockEntity} finds container entities with {@code EntitySelector.CONTAINER_ENTITY_SELECTOR}.
- * Instead of targeting that selector's synthetic lambda by name (fragile: the name changes between versions and
- * the remapper cannot always resolve it), this appends a predicate to the field at the end of the static
- * initializer. Only a cart that {@code LootrHooks.blocksCartUnpack} accepts is filtered out.
- */
 @Mixin(EntitySelector.class)
 public abstract class MixinEntitySelector {
     @Shadow

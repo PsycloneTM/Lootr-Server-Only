@@ -10,12 +10,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/**
- * Trapped chests power redstone from {@code ChestBlockEntity.getOpenCount},
- * which reads the real block entity's own opener counter. Loot chests never
- * touch that counter (see {@link OpenTracker}), so report the loot-menu opener
- * count too. Static method, so the handler is static. Not verified by a build.
- */
 @Mixin(ChestBlockEntity.class)
 public abstract class MixinChestBlockEntity {
 

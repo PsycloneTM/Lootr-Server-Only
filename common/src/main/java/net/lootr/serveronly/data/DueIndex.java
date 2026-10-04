@@ -9,20 +9,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.LongUnaryOperator;
 
-/**
- * The in-memory half of a tracker shard: tracked block positions, each with a "check me at this game time"
- * hint, ordered by that time. Deliberately free of any Minecraft types so it can be unit tested and
- * benchmarked on its own.
- * <p>
- * The hint is <b>not</b> the authority on when something decays or refreshes. The container's own
- * {@code firstGeneratedGameTime} still is, and the sweep re-derives the real deadline from it every time it
- * looks. The hint only says "there is no point looking before this". A hint that is too early costs one
- * wasted look; the sweep corrects it by rescheduling. Hints are never allowed to be too late: see
- * {@link #wakeAll} and {@link #wakeChunk}.
- * <p>
- * Costs: {@link #takeDue} is O(k log n) for k due entries (and O(1) when nothing is due), where the old
- * "copy the whole set and look at everything" sweep was O(n) every time.
- */
 public final class DueIndex {
 
     private final LongUnaryOperator chunkOf;
@@ -30,7 +16,6 @@ public final class DueIndex {
     private final TreeMap<Long, Set<Long>> byDue = new TreeMap<>();
     private final Map<Long, Set<Long>> byChunk = new HashMap<>();
 
-    /** @param chunkOf maps a packed position to a key identifying the chunk it is in */
     public DueIndex(LongUnaryOperator chunkOf) {
         this.chunkOf = chunkOf;
     }
@@ -47,12 +32,10 @@ public final class DueIndex {
         return dueOf.containsKey(pos);
     }
 
-    /** Earliest hint, or {@link Long#MAX_VALUE} if empty. */
     public long minDue() {
         return byDue.isEmpty() ? Long.MAX_VALUE : byDue.firstKey();
     }
 
-    /** Adds a position if it is not tracked yet. An existing entry is left exactly as it is. */
     public boolean add(long pos, long due) {
         if (dueOf.containsKey(pos)) {
             return false;
@@ -61,7 +44,6 @@ public final class DueIndex {
         return true;
     }
 
-    /** Adds or reschedules. */
     public void put(long pos, long due) {
         Long old = dueOf.put(pos, due);
         if (old != null) {
@@ -92,14 +74,9 @@ public final class DueIndex {
         return true;
     }
 
-    /**
-     * Removes and returns every entry whose hint is at or before {@code now}. The caller decides, per
-     * entry, whether to {@link #put} it back with a new hint or let it go.
-     */
     public List<Long> takeDue(long now) {
         List<Long> out = new ArrayList<>();
         while (!byDue.isEmpty() && byDue.firstKey() <= now) {
-            // copy: remove() edits the set we would be iterating
             for (long pos : new ArrayList<>(byDue.firstEntry().getValue())) {
                 out.add(pos);
                 remove(pos);
@@ -108,7 +85,6 @@ public final class DueIndex {
         return out;
     }
 
-    /** Makes every entry in one chunk due at {@code now} (that chunk just loaded). Returns how many changed. */
     public int wakeChunk(long chunkKey, long now) {
         Set<Long> inChunk = byChunk.get(chunkKey);
         if (inChunk == null) {
@@ -124,7 +100,6 @@ public final class DueIndex {
         return changed;
     }
 
-    /** Makes every entry due at {@code now} (a setting that the hints were computed from changed). */
     public void wakeAll(long now) {
         for (long pos : new ArrayList<>(dueOf.keySet())) {
             if (dueOf.get(pos) > now) {
@@ -133,7 +108,6 @@ public final class DueIndex {
         }
     }
 
-    /** Parallel arrays for saving: positions[i] has hint dues[i]. */
     public long[][] snapshot() {
         long[] positions = new long[dueOf.size()];
         long[] dues = new long[positions.length];
