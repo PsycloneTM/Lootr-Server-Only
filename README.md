@@ -41,7 +41,9 @@ Also included:
 - **Refresh and decay:** containers can reset after a timer, or vanish after being looted (both off by default).
 - **Protection:** one player (or one creeper) can't destroy loot for everyone.
 - **Filters:** per-dimension and per-loot-table/mod lists, plus a built-in list of tables known to misbehave.
-- **Admin commands:** inspect, reset, clear, spawn and view loot containers (`/lootr ...`).
+- **Admin commands:** inspect, reset, clear, spawn, view and re-scan loot containers (`/lootr ...`), on the container you stand on or a named target.
+- **Hopper and explosion handling:** hoppers can't drain loot minecarts, and `blast_resistant` follows upstream's resistance-16 rule.
+- **Advancement trigger:** loot rolls fire vanilla's `minecraft:generate_loot`, so datapack advancements keyed on it work.
 - **Advancements:** first-use advancements for each container type.
 - **Add-on API:** loot filters, listeners and team resolvers for other server-side mods.
 - **Config parity:** key names and defaults follow upstream Lootr, so an upstream config copies over largely as-is.
@@ -98,6 +100,7 @@ Everything else, with all keys, defaults and the exact break rules, is in
 
 | Command | Purpose |
 |---|---|
+| `/lootr` | Show command usage |
 | `/lootr info` / `info block <pos>` / `info entity <target>` | How many players/teams have looted it, and its timers |
 | `/lootr reset` / `reset block <pos>` / `reset entity <target>` | Forget everyone's loot so the next open rolls fresh |
 | `/lootr id`, `refresh`, `decay` (same three forms) | Show the container's Lootr id; force a refresh or a decay now |
@@ -110,6 +113,8 @@ Everything else, with all keys, defaults and the exact break rules, is in
 | `/lootr reload` | Fabric only: re-read the config file |
 
 With no `block`/`entity` target, a command acts on the container you are standing on (the block at your feet or the one below, or a chest minecart within a block), like upstream.
+
+Not implemented: `custom-chest`, `custom-area` and `custom-map`, which depend on upstream's custom inventories (they need a custom block, so no server-only equivalent). `refresh` and `decay` are deprecated upstream but work here.
 
 Full details in [Commands](../../wiki/Commands).
 
@@ -125,9 +130,10 @@ Full details in [Commands](../../wiki/Commands).
 ## Project status
 
 Both loaders build and boot a dedicated server, and a light playtest passed.
-Features added since then (background refresh and decay sweeps, add-on API,
-spawn and `open_as` commands, minecart break rules, and others) are written and
-checked against the 1.21.1 sources but have had limited in-game testing. Bug
+Features added since then (background refresh and decay sweeps with chunk-aware scheduling,
+add-on API, spawn, `open_as` and `force_*` commands, standing-on command forms, the
+hopper and explosion mixins, the `generate_loot` trigger, minecart break rules, and others)
+are written and checked against the 1.21.1 sources but have had limited in-game testing. Bug
 reports are welcome. See
 [Verification status](../../wiki/Development-notes#verification-status) for the full list
 and a quick test for each.
@@ -147,6 +153,9 @@ on first run until you accept `eula.txt` in its `run/` folder.
 
 Jars are written to `neoforge/build/libs/` and `fabric/build/libs/`.
 
+The project has three modules: `common` (loader-independent logic: commands, loot state, config settings,
+interaction handlers), `neoforge` and `fabric` (registration, config and mixins per loader).
+
 ## Documentation
 
 Full docs are in the [wiki](../../wiki):
@@ -158,7 +167,6 @@ Full docs are in the [wiki](../../wiki):
 | [Commands](../../wiki/Commands) | Every `/lootr` command |
 | [Add-on API](../../wiki/Add-on-API) | Loot filters, listeners and the `LootrAPI` facade |
 | [Development notes](../../wiki/Development-notes) | Project layout, mixins, verification status, implementation notes |
-| [LOOTR_SERVER_ONLY_DESIGN.md](LOOTR_SERVER_ONLY_DESIGN.md) | Design rationale and migration plan |
 
 ## Credits and license
 
