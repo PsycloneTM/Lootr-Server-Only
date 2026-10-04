@@ -1,0 +1,31 @@
+{
+  "required": true,
+  "package": "net.lootr.serveronly.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "AccessorItemFrame",
+    "MixinEntity",
+    "AccessorBrushableBlockEntity",
+    "MixinDecoratedPotBlock",
+    "MixinRandomizableContainerBlockEntity",
+    "MixinAbstractMinecartContainer",
+    "MixinAbstractContainerMenu",
+    "MixinBrushableBlockEntity",
+    "MixinChestBlockEntity",
+    "MixinEndCityPiece",
+    "MixinStructureTemplate",
+    "MixinServerGamePacketListenerImpl",
+    "MixinBrushableBlock",
+    "MixinItemFrame",
+    "MixinExplosionDamageCalculator",
+    "MixinEntitySelector",
+    "MixinHopperBlockEntity"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "minVersion": "0.8",
+  "mixinextras": {
+    "minVersion": "0.5.0"
+  }
+}

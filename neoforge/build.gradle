@@ -1,0 +1,48 @@
+plugins {
+    id 'net.neoforged.moddev'
+}
+
+neoForge {
+    // Pin the exact NeoForge version we build/test against.
+    version = neoforge_version
+
+    // --- THE KEY "SERVER-ONLY" DECISION ---
+    // We do NOT declare a separate client run/source set, we do NOT ship
+    // any assets/ or client-only registration, and every class in this
+    // project must be safe to load with NO client Dist present.
+    // A vanilla, un-modified client can join a server running this mod.
+    runs {
+        server {
+            // Only a server run configuration is defined. There is
+            // intentionally no `client { ... }` run here: this mod is
+            // never meant to be loaded by a client, modded or otherwise.
+            server()
+            systemProperty 'neoforge.enabledGameTestNamespaces', mod_id
+        }
+        gameTestServer {
+            type = "gameTestServer"
+            systemProperty 'neoforge.enabledGameTestNamespaces', mod_id
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+            sourceSet project(':common').sourceSets.main
+        }
+    }
+}
+
+dependencies {
+    // Standard NeoForge dependency; no client-only libraries (no JEI, no
+    // Jade, no forge rendering APIs) are ever referenced from this module.
+    implementation "net.neoforged:neoforge:${neoforge_version}"
+
+    // Shared loader-independent code. Compiled against here, and bundled into this jar below.
+    compileOnly project(':common')
+}
+
+// Ship the common module's classes inside this mod's jar (it is not published as its own mod).
+tasks.named('jar') {
+    from project(':common').sourceSets.main.output
+}
