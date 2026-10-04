@@ -98,15 +98,18 @@ Everything else, with all keys, defaults and the exact break rules, is in
 
 | Command | Purpose |
 |---|---|
-| `/lootr info block <pos>` / `entity <target>` | How many players/teams have looted it, and its timers |
-| `/lootr reset block <pos>` / `entity <target>` | Forget everyone's loot so the next open rolls fresh |
+| `/lootr info` / `info block <pos>` / `info entity <target>` | How many players/teams have looted it, and its timers |
+| `/lootr reset` / `reset block <pos>` / `reset entity <target>` | Forget everyone's loot so the next open rolls fresh |
+| `/lootr id`, `refresh`, `decay` (same three forms) | Show the container's Lootr id; force a refresh or a decay now |
 | `/lootr clear <players>` | Let those players loot everything again |
-| `/lootr openers ...` | Who has a loot menu open right now |
+| `/lootr openers` (same three forms) | Everyone who has opened it (kept across refresh/reset), plus how many are viewing now |
 | `/lootr frame mark\|unmark <target>` | Make an item frame a loot frame, or stop it being one |
 | `/lootr chest\|barrel\|trapped_chest\|shulker\|pot\|gravel\|sand\|cart [<table>]` | Create a loot container at your position |
-| `/lootr open_as <player> ...` | View what a player has left in a container, read-only |
-| `/lootr force_chunk\|force_radius\|force_all` | Run the chunk discovery scan for decay/refresh on demand |
+| `/lootr open_as <player>` / `open_as_uuid <uuid>` (optionally followed by `block <pos>` or `entity <target>`) | View what a player has left in a container, read-only |
+| `/lootr force_chunk\|force_radius\|force_all` | Run the chunk discovery scan for decay/refresh on demand; also re-queues tracked containers that were waiting for their chunk to load |
 | `/lootr reload` | Fabric only: re-read the config file |
+
+With no `block`/`entity` target, a command acts on the container you are standing on (the block at your feet or the one below, or a chest minecart within a block), like upstream.
 
 Full details in [Commands](../../wiki/Commands).
 
@@ -153,8 +156,9 @@ Full docs are in the [wiki](../../wiki):
 | [Features in detail](../../wiki/Features-in-detail) | How each object behaves, protection, break rules, item frames, advancements |
 | [Configuration](../../wiki/Configuration) | Every config key with defaults |
 | [Commands](../../wiki/Commands) | Every `/lootr` command |
-| [Add-on API](../../wiki/Add‐on-API) | Loot filters, listeners and the `LootrAPI` facade |
+| [Add-on API](../../wiki/Add-on-API) | Loot filters, listeners and the `LootrAPI` facade |
 | [Development notes](../../wiki/Development-notes) | Project layout, mixins, verification status, implementation notes |
+| [LOOTR_SERVER_ONLY_DESIGN.md](LOOTR_SERVER_ONLY_DESIGN.md) | Design rationale and migration plan |
 
 ## Credits and license
 
