@@ -1,0 +1,27 @@
+{
+  "parent": "lootr_serveronly:root",
+  "display": {
+    "icon": {
+      "id": "minecraft:chest",
+      "count": 1
+    },
+    "title": {
+      "text": "First Find"
+    },
+    "description": {
+      "text": "Open your first Lootr chest!"
+    },
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "opened": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "opened"
+    ]
+  ]
+}

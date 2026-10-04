@@ -1,0 +1,35 @@
+plugins {
+    id 'net.neoforged.moddev'
+}
+
+neoForge {
+    version = neoforge_version
+
+    runs {
+        server {
+            server()
+            systemProperty 'neoforge.enabledGameTestNamespaces', mod_id
+        }
+        gameTestServer {
+            type = "gameTestServer"
+            systemProperty 'neoforge.enabledGameTestNamespaces', mod_id
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+            sourceSet project(':common').sourceSets.main
+        }
+    }
+}
+
+dependencies {
+    implementation "net.neoforged:neoforge:${neoforge_version}"
+
+    compileOnly project(':common')
+}
+
+tasks.named('jar') {
+    from project(':common').sourceSets.main.output
+}
