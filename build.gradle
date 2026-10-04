@@ -4,11 +4,8 @@
 // would otherwise be duplicated across neoforge/build.gradle and
 // fabric/build.gradle is centralized in `subprojects { }` below.
 //
-// Unlike upstream, there is no `common` subproject: this project has no
-// shared code between loaders yet. If/when Lootr-equivalent logic needs to
-// be shared, a `common` module can be added the same way upstream does it
-// (a plain `java-library` subproject that neoforge/ and fabric/ both
-// `compileOnly(project(':common'))` against).
+// `common` holds loader-independent code (see COMMON_MODULE_PLAN.md). neoforge/ and fabric/ compile against it and
+// bundle its classes into their own jars.
 plugins {
     id 'idea'
     id 'maven-publish'

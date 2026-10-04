@@ -13,5 +13,6 @@ plugins {
 
 rootProject.name = "lootr-serveronly"
 
+include("common")
 include("fabric")
 include("neoforge")
