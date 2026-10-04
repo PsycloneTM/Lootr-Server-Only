@@ -60,7 +60,7 @@ public final class LootrCommands {
                         .then(Commands.literal("entity")
                                 .then(Commands.argument("target", EntityArgument.entity())
                                         .executes(ctx -> info(ctx.getSource(),
-                                                EntityArgument.getEntity(ctx, "target"), "that entity")))))
+                                                entityTarget(ctx), "that entity")))))
                 .then(Commands.literal("reset")
                         .executes(ctx -> resetStanding(ctx.getSource(), standing(ctx)))
                         .then(Commands.literal("block")
@@ -69,7 +69,7 @@ public final class LootrCommands {
                         .then(Commands.literal("entity")
                                 .then(Commands.argument("target", EntityArgument.entity())
                                         .executes(ctx -> {
-                                            Entity entity = EntityArgument.getEntity(ctx, "target");
+                                            Entity entity = entityTarget(ctx);
                                             return reset(ctx.getSource(), entity, "that entity", entity);
                                         }))))
                 .then(Commands.literal("refresh")
@@ -80,7 +80,7 @@ public final class LootrCommands {
                         .then(Commands.literal("entity")
                                 .then(Commands.argument("target", EntityArgument.entity())
                                         .executes(ctx -> {
-                                            Entity entity = EntityArgument.getEntity(ctx, "target");
+                                            Entity entity = entityTarget(ctx);
                                             return refreshNow(ctx.getSource(), entity, "that entity");
                                         }))))
                 .then(Commands.literal("decay")
@@ -91,7 +91,7 @@ public final class LootrCommands {
                         .then(Commands.literal("entity")
                                 .then(Commands.argument("target", EntityArgument.entity())
                                         .executes(ctx -> {
-                                            Entity entity = EntityArgument.getEntity(ctx, "target");
+                                            Entity entity = entityTarget(ctx);
                                             return decayNow(ctx.getSource(), entity, "that entity");
                                         }))))
                 .then(Commands.literal("id")
@@ -101,7 +101,7 @@ public final class LootrCommands {
                                         .executes(ctx -> idOf(ctx.getSource(), blockAt(ctx), "that block"))))
                         .then(Commands.literal("entity")
                                 .then(Commands.argument("target", EntityArgument.entity())
-                                        .executes(ctx -> idOf(ctx.getSource(), EntityArgument.getEntity(ctx, "target"), "that entity")))))
+                                        .executes(ctx -> idOf(ctx.getSource(), entityTarget(ctx), "that entity")))))
                 .then(Commands.literal("clear")
                         .then(Commands.argument("players", EntityArgument.players())
                                 .executes(ctx -> clear(ctx.getSource(), EntityArgument.getPlayers(ctx, "players")))))
@@ -117,7 +117,7 @@ public final class LootrCommands {
                         .then(Commands.literal("entity")
                                 .then(Commands.argument("target", EntityArgument.entity())
                                         .executes(ctx -> {
-                                            Entity entity = EntityArgument.getEntity(ctx, "target");
+                                            Entity entity = entityTarget(ctx);
                                             return openers(ctx.getSource(), (ServerLevel) entity.level(), entity, "that entity");
                                         }))))
                 .then(Commands.literal("frame")
@@ -321,8 +321,21 @@ public final class LootrCommands {
         return reset(source, holder, "the container you are standing on", holder instanceof Entity e ? e : null);
     }
 
+    static final String DEPRECATED = "The block <pos> / entity <target> forms are deprecated and may be removed; "
+            + "stand on the container and run the command with no target instead.";
+
+    static void warnDeprecated(CommandSourceStack source) {
+        source.sendSuccess(() -> Component.literal(DEPRECATED).withStyle(net.minecraft.ChatFormatting.YELLOW), false);
+    }
+
+    private static Entity entityTarget(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        warnDeprecated(ctx.getSource());
+        return EntityArgument.getEntity(ctx, "target");
+    }
+
     @Nullable
     private static BlockEntity blockAt(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        warnDeprecated(ctx.getSource());
         return ctx.getSource().getLevel().getBlockEntity(BlockPosArgument.getLoadedBlockPos(ctx, "pos"));
     }
 

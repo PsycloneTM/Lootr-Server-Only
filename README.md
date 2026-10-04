@@ -112,7 +112,7 @@ Everything else, with all keys, defaults and the exact break rules, is in
 | `/lootr force_chunk\|force_radius\|force_all` | Run the chunk discovery scan for decay/refresh on demand; also re-queues tracked containers that were waiting for their chunk to load |
 | `/lootr reload` | Fabric only: re-read the config file |
 
-With no `block`/`entity` target, a command acts on the container you are standing on (the block at your feet or the one below, or a chest minecart within a block), like upstream.
+Commands act on the container you are standing on (the block at your feet or the one below, or a chest minecart within a block), like upstream. The `block <pos>` and `entity <target>` forms still work but are deprecated and print a warning; they may be removed.
 
 Not implemented: `custom-chest`, `custom-area` and `custom-map`, which depend on upstream's custom inventories (they need a custom block, so no server-only equivalent). `refresh` and `decay` are deprecated upstream but work here.
 
@@ -167,6 +167,7 @@ Full docs are in the [wiki](../../wiki):
 | [Commands](../../wiki/Commands) | Every `/lootr` command |
 | [Add-on API](../../wiki/Add-on-API) | Loot filters, listeners and the `LootrAPI` facade |
 | [Development notes](../../wiki/Development-notes) | Project layout, mixins, verification status, implementation notes |
+| [LOOTR_SERVER_ONLY_DESIGN.md](LOOTR_SERVER_ONLY_DESIGN.md) | Design rationale and migration plan |
 
 ## Credits and license
 
