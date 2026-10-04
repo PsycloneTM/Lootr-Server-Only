@@ -153,7 +153,7 @@ Full docs are in the [wiki](../../wiki):
 | [Features in detail](../../wiki/Features-in-detail) | How each object behaves, protection, break rules, item frames, advancements |
 | [Configuration](../../wiki/Configuration) | Every config key with defaults |
 | [Commands](../../wiki/Commands) | Every `/lootr` command |
-| [Add-on API](../../wiki/Add-on-API) | Loot filters, listeners and the `LootrAPI` facade |
+| [Add-on API](../../wiki/Add‐on-API) | Loot filters, listeners and the `LootrAPI` facade |
 | [Development notes](../../wiki/Development-notes) | Project layout, mixins, verification status, implementation notes |
 
 ## Credits and license
