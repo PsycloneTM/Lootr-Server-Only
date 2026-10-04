@@ -167,7 +167,6 @@ Full docs are in the [wiki](../../wiki):
 | [Commands](../../wiki/Commands) | Every `/lootr` command |
 | [Add-on API](../../wiki/Add-on-API) | Loot filters, listeners and the `LootrAPI` facade |
 | [Development notes](../../wiki/Development-notes) | Project layout, mixins, verification status, implementation notes |
-| [LOOTR_SERVER_ONLY_DESIGN.md](LOOTR_SERVER_ONLY_DESIGN.md) | Design rationale and migration plan |
 
 ## Credits and license
 
