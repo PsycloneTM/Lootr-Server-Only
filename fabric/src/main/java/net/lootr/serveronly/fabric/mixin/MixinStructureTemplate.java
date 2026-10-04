@@ -17,29 +17,6 @@ import org.spongepowered.asm.mixin.injection.At;
 
 import java.util.Optional;
 
-/**
- * Fabric twin of the NeoForge {@code MixinStructureTemplate}; read that class
- * for the full reasoning. In short: hook the direct call to
- * {@code createEntityIgnoreException} inside the named placement method, tag the
- * vanilla frame it returns, and never name the compiler-indexed lambda.
- * <p>
- * Fabric runs vanilla's {@code StructureTemplate}, where that method is still
- * called {@code placeEntities} (NeoForge renames it with its own patch).
- * <p>
- * <b>This also fixes a latent Fabric bug in the previous version.</b> It named
- * only Mojang-style lambdas ({@code lambda$placeEntities$5}). A real Fabric
- * runtime uses intermediary names, where that lambda is {@code method_17917};
- * upstream lists that name explicitly and the previous copy here did not, and
- * Loom's refmap cannot remap a lambda name. Naming a real method and a real
- * call lets the refmap translate both to intermediary at build time.
- * <p>
- * <b>Status:</b> the Fabric module builds and boots a dedicated server, but a
- * mixin is applied only when its target class first loads, so this one is not
- * proven until structure placement has actually run. Specifically unconfirmed:
- * that Loom's annotation processor emits refmap entries for these two strings.
- * If Mixin reports it cannot find the target on Fabric, check the generated
- * {@code lootr_serveronly.refmap.json} first.
- */
 @Mixin(StructureTemplate.class)
 public class MixinStructureTemplate {
 
@@ -59,10 +36,6 @@ public class MixinStructureTemplate {
         return created;
     }
 
-    /**
-     * Structure saving: a looted container saved into a structure must not carry this mod's per-player state
-     * into every copy. See {@link LootStateStripper}. The loot table stays so the copy is a loot container again.
-     */
     @WrapOperation(
             method = "fillFromWorld",
             at = @At(value = "INVOKE",
@@ -74,7 +47,6 @@ public class MixinStructureTemplate {
         return saved;
     }
 
-    /** Same for entities saved into a template (a chest minecart's looted state, an item frame's takers). */
     @WrapOperation(
             method = "fillEntityList",
             at = @At(value = "INVOKE",

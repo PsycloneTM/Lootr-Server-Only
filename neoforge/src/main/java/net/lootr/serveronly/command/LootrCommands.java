@@ -46,31 +46,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * Operator commands (permission level 2):
- * <ul>
- *     <li>{@code /lootr info block <pos>} / {@code /lootr info entity <target>}
- *     - how many players (or teams) have looted it, and the refresh timer.</li>
- *     <li>{@code /lootr reset block <pos>} / {@code /lootr reset entity <target>}
- *     - forget everyone's loot so the next open by anyone rolls fresh loot.</li>
- *     <li>{@code /lootr refresh|decay|id block <pos>|entity <target>} - force a refresh, force a decay, or report the
- *     stable Lootr state identity for a target.
- *     <li>{@code /lootr clear <players>} - forget everything those players have looted, so they
- *     can loot it all again (lazy; see {@code PlayerClears}).</li>
- *     <li>{@code /lootr openers block <pos>} / {@code entity <target>} - who has it open right now.</li>
- *     <li>{@code /lootr frame mark|unmark <target>} - make one item frame a loot
- *     frame, or stop it being one.</li>
- *     <li>Spawn ({@code chest}, {@code barrel}, ...), {@code force_*} and {@code open_as*}: see {@link AdminCommands}.</li>
- * </ul>
- * Blocks and entities are addressed explicitly rather than "the thing you are
- * looking at", so every command works from a command block or the console and
- * needs no ray-tracing. Entities cover chest minecarts and item frames.
- * <p>
- * Both commands work on the same per-object attachment the containers, pots,
- * brushable blocks, minecarts and frames all share, so one code path covers
- * every kind. Nothing here can turn a vanilla container into a Lootr one or
- * back: an object only has state once somebody has looted it.
- */
 @EventBusSubscriber(modid = LootrServerOnly.MOD_ID)
 public final class LootrCommands {
 
@@ -152,18 +127,10 @@ public final class LootrCommands {
                                 .then(Commands.argument("target", EntityArgument.entity())
                                         .executes(ctx -> markFrame(ctx.getSource(),
                                                 EntityArgument.getEntity(ctx, "target"), false)))));
-        // chest|barrel|... spawn commands, force_chunk|force_radius|force_all, open_as|open_as_uuid
         AdminCommands.addTo(root);
         event.getDispatcher().register(root);
     }
 
-    /**
-     * {@code /lootr clear <players>}: forget everything these players have looted, so they can loot every
-     * container, pot, suspicious block and item frame again. Lazy: see {@link PlayerClears} for why it is
-     * one increment per loot key rather than a walk over every container in the world. Both the player's
-     * own key and their team's key are cleared, because which one is in use depends on {@code team_loot}
-     * (so with team loot on, a teammate's records are cleared too).
-     */
     private static int clear(CommandSourceStack source, Collection<ServerPlayer> players) {
         PlayerClears clears = PlayerClears.get(source.getServer());
         Set<UUID> keys = new LinkedHashSet<>();
@@ -185,10 +152,6 @@ public final class LootrCommands {
         return players.size();
     }
 
-    /**
-     * A cleared player's client still shows loot frames they had taken as empty. Re-send the real item for
-     * the marked frames they can currently see, so they look lootable again without relogging.
-     */
     private static void refreshFrames(ServerPlayer player) {
         ServerLevel level = (ServerLevel) player.level();
         for (ItemFrame frame : level.getEntitiesOfClass(ItemFrame.class, player.getBoundingBox().inflate(160.0),
@@ -197,11 +160,6 @@ public final class LootrCommands {
         }
     }
 
-    /**
-     * {@code /lootr openers block|entity}: the players who have a loot menu open on this container right
-     * now. Reads the open menus themselves (see {@code Decay.viewers}), so it works for minecarts too and
-     * is exact: nothing to go stale if a player logs out or their menu is closed by another mod.
-     */
     private static int openers(CommandSourceStack source, ServerLevel level, @Nullable Object owner, String what) {
         if (owner == null) {
             source.sendFailure(Component.literal("There is no block entity at that position."));
@@ -221,13 +179,6 @@ public final class LootrCommands {
         return viewers.size();
     }
 
-    /**
-     * Marks or unmarks one item frame as a loot frame (see {@link ItemFrameMarker}).
-     * Frames in worlds generated before the mod was installed, or placed by a
-     * structure block, are never marked automatically; this replaces the long
-     * {@code /tag} command. Marking applies the same eligibility rules as the
-     * automatic marker (no fixed, invisible, empty or map frames).
-     */
     private static int markFrame(CommandSourceStack source, Entity target, boolean mark) {
         if (!(target instanceof ItemFrame frame)) {
             source.sendFailure(Component.literal("That entity is not an item frame."));
@@ -257,7 +208,6 @@ public final class LootrCommands {
         return 1;
     }
 
-    /** The block entity at the given (loaded) position, or null if the block has none. */
     @Nullable
     private static BlockEntity blockAt(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         return ctx.getSource().getLevel().getBlockEntity(BlockPosArgument.getLoadedBlockPos(ctx, "pos"));
@@ -288,11 +238,6 @@ public final class LootrCommands {
         boolean hadAnything = holder.getData(ModAttachments.LOOT_STATE).resetAll();
 
         if (entity instanceof ItemFrame frame) {
-            // ChunkMap's watcher query is not exposed with the same signature in
-            // Minecraft 1.21.1 mappings. Sending the normal entity-data update to
-            // all currently connected players is safe: clients ignore metadata for
-            // entities they are not tracking, and players who start tracking later
-            // receive the reset state normally from the entity spawn packet.
             for (ServerPlayer player : source.getServer().getPlayerList().getPlayers()) {
                 ItemFrameVisualSync.sendVisibleItem(player, frame);
             }
@@ -318,7 +263,6 @@ public final class LootrCommands {
         return hadAnything ? 1 : 0;
     }
 
-    /** Forces the existing refresh timer due and then runs the normal refresh path. */
     private static int refreshNow(CommandSourceStack source, @Nullable IAttachmentHolder holder, String what) {
         if (!hasState(source, holder, what)) {
             return 0;
@@ -372,7 +316,6 @@ public final class LootrCommands {
         return 0;
     }
 
-    /** Forces the existing decay timer due and then runs the normal decay path. */
     private static int decayNow(CommandSourceStack source, @Nullable IAttachmentHolder holder, String what) {
         if (!hasState(source, holder, what)) {
             return 0;
@@ -411,7 +354,6 @@ public final class LootrCommands {
         return decayed ? 1 : 0;
     }
 
-    /** Returns the stable state UUID assigned to this Lootr object. */
     private static int idOf(CommandSourceStack source, @Nullable IAttachmentHolder holder, String what) {
         if (!hasState(source, holder, what)) {
             return 0;
@@ -425,7 +367,6 @@ public final class LootrCommands {
         return 1;
     }
 
-    /** Returns the server level containing a supported Lootr attachment holder. */
     private static ServerLevel levelOf(CommandSourceStack source, @Nullable IAttachmentHolder holder) {
         if (holder instanceof BlockEntity blockEntity && blockEntity.getLevel() instanceof ServerLevel level) {
             return level;
@@ -436,7 +377,6 @@ public final class LootrCommands {
         return source.getLevel();
     }
 
-    /** Sends the failure message and returns false when there is no loot state to act on. */
     private static boolean hasState(CommandSourceStack source, @Nullable IAttachmentHolder holder, String what) {
         if (holder == null) {
             source.sendFailure(Component.literal("There is no block entity at that position."));
@@ -450,10 +390,6 @@ public final class LootrCommands {
         return true;
     }
 
-    /**
-     * The refresh interval in force for this object: filtered by its loot table and dimension where it
-     * has a loot table (containers, pots, chest minecarts), otherwise the plain {@code refresh_value}.
-     */
     private static long refreshTicksOf(Object holder) {
         ResourceKey<LootTable> table;
         Level level;

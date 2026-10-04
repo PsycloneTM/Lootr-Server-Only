@@ -38,29 +38,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Fabric twin of the NeoForge {@code PotInteractionHandler}; read that class
- * for the design (pots never open a menu, so the whole interaction is
- * substituted, and the loot goes straight into the player's inventory).
- * <p>
- * Differences from the NeoForge version:
- * <ul>
- *     <li>{@link UseBlockCallback} for right-click and
- *     {@link AttackBlockCallback} for punching, instead of
- *     {@code RightClickBlock}/{@code LeftClickBlock}. Both fire
- *     <b>before</b> the spectator check, so spectators are filtered here by
- *     hand.</li>
- *     <li>On the logical server, any non-{@code PASS} result from
- *     {@code AttackBlockCallback} cancels further processing (Fabric API's
- *     own Javadoc), so the pot is not broken. A vanilla client predicts the
- *     break locally and reverts it when the server acknowledges the action;
- *     whether a sherd-decorated pot keeps its sherds on that client afterwards
- *     is untested, so check it when playtesting.</li>
- *     <li>The attachment is a raw {@link CompoundTag}, so the state is
- *     loaded, mutated and written back by hand, exactly like
- *     {@link ContainerInteractionHandler}.</li>
- * </ul>
- */
 public final class PotInteractionHandler {
 
     public static void register() {
@@ -78,8 +55,6 @@ public final class PotInteractionHandler {
             return InteractionResult.PASS;
         }
         if (hand != InteractionHand.MAIN_HAND) {
-            // Swallow the off-hand pass too, or vanilla could insert the
-            // off-hand item into the pot and resolve its loot table.
             return InteractionResult.CONSUME;
         }
         smash(serverPlayer, pot, level);
@@ -88,7 +63,6 @@ public final class PotInteractionHandler {
 
     private static InteractionResult onAttackBlock(Player player, Level world, InteractionHand hand,
                                                    BlockPos pos, Direction direction) {
-        // Creative players are left alone so an admin can still remove a pot.
         if (world.isClientSide() || !(player instanceof ServerPlayer serverPlayer)
                 || serverPlayer.isSpectator() || serverPlayer.isCreative()) {
             return InteractionResult.PASS;
@@ -102,7 +76,6 @@ public final class PotInteractionHandler {
         return InteractionResult.SUCCESS;
     }
 
-    /** The pot at {@code pos} if it still has an unresolved loot table and this dimension is enabled. */
     @Nullable
     private static DecoratedPotBlockEntity lootPotAt(ServerLevel level, BlockPos pos) {
         if (!LootrConfig.isDimensionEnabled(level.dimension())) {
@@ -115,7 +88,6 @@ public final class PotInteractionHandler {
         return null;
     }
 
-    /** Sneaking with something in a hand makes vanilla skip the block's own interaction. */
     private static boolean isPlacingBlockAgainst(ServerPlayer player) {
         return player.isSecondaryUseActive()
                 && (!player.getMainHandItem().isEmpty() || !player.getOffhandItem().isEmpty());
@@ -142,7 +114,7 @@ public final class PotInteractionHandler {
 
         ResourceKey<LootTable> tableKey = pot.getLootTable();
         if (tableKey == null) {
-            return; // cannot happen after lootPotAt, but never NPE on a server thread
+            return;
         }
         LootTable table = level.getServer().reloadableRegistries().getLootTable(tableKey);
         UnresolvedTables.check(player, tableKey, table);
@@ -154,8 +126,6 @@ public final class PotInteractionHandler {
                 .create(LootContextParamSets.CHEST);
         List<ItemStack> loot = LootRoller.roll(table, params, pot.getLootTableSeed());
 
-        // Record "looted" before handing anything out. An all-empty entry is
-        // the marker; LootrLootState keeps it and saves it like any other.
         state.setContents(lootKey, NonNullList.withSize(state.getContainerSize(), ItemStack.EMPTY));
         state.markFirstGeneratedIfAbsent(level.getGameTime());
         persist(pot, state, provider);

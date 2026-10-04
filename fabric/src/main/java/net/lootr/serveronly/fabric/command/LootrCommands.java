@@ -47,24 +47,8 @@ import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-/**
- * Fabric twin of the NeoForge {@code LootrCommands}; see that class for the
- * command list and behavior ({@code /lootr info|reset block|entity} and
- * {@code /lootr frame mark|unmark}, permission level 2; the spawn, {@code force_*} and {@code open_as*} commands are
- * in {@link AdminCommands}). Fabric-only extra:
- * {@code /lootr reload} re-reads the JSON config.
- * <p>
- * Differences: registration goes through Fabric API's
- * {@link CommandRegistrationCallback} (module {@code fabric-command-api-v2}),
- * and the attachment is a raw {@link CompoundTag}, so state is loaded into a
- * {@link LootrLootState}, mutated, and written back by hand, exactly as the
- * interaction handlers do. An object with no loot state has an empty tag (the
- * attachment's initializer), since anything Lootr has ever saved contains at
- * least a container id.
- */
 public final class LootrCommands {
 
-    /** Read/write access to one block entity's or entity's attachment. */
     private record Target(Supplier<CompoundTag> read, Consumer<CompoundTag> write, Object holder) {}
 
     public static void register() {
@@ -145,17 +129,13 @@ public final class LootrCommands {
                                         .then(Commands.argument("target", EntityArgument.entity())
                                                 .executes(ctx -> markFrame(ctx.getSource(),
                                                         EntityArgument.getEntity(ctx, "target"), false)))))
-                        // Fabric has no config-reload event, so config is read at startup.
-                        // This re-reads the file without a restart.
                         .then(Commands.literal("reload")
                                 .executes(ctx -> reload(ctx.getSource())));
-                // chest|barrel|... spawn commands, force_chunk|force_radius|force_all, open_as|open_as_uuid
                 AdminCommands.addTo(root);
                 dispatcher.register(root);
         });
     }
 
-    /** Forces the shared refresh timer due, then executes the same refresh operation used by normal opens/ticks. */
     private static int refreshNow(CommandSourceStack source, @Nullable Target target, String what) {
         LootrLootState state = loadState(source, target, what);
         if (state == null) return 0;
@@ -192,7 +172,6 @@ public final class LootrCommands {
         return refreshed ? 1 : 0;
     }
 
-    /** Forces the shared decay timer due, then executes the normal decay operation. */
     private static int decayNow(CommandSourceStack source, @Nullable Target target, String what) {
         LootrLootState state = loadState(source, target, what);
         if (state == null) return 0;
@@ -232,7 +211,6 @@ public final class LootrCommands {
         return decayed ? 1 : 0;
     }
 
-    /** Returns the stable state UUID assigned to this Lootr object. */
     private static int idOf(CommandSourceStack source, @Nullable Target target, String what) {
         LootrLootState state = loadState(source, target, what);
         if (state == null) return 0;
@@ -250,13 +228,6 @@ public final class LootrCommands {
         return 1;
     }
 
-    /**
-     * {@code /lootr clear <players>}: forget everything these players have looted, so they can loot every
-     * container, pot, suspicious block and item frame again. Lazy: see {@link PlayerClears} for why it is
-     * one increment per loot key rather than a walk over every container in the world. Both the player's
-     * own key and their team's key are cleared, because which one is in use depends on {@code team_loot}
-     * (so with team loot on, a teammate's records are cleared too).
-     */
     private static int clear(CommandSourceStack source, Collection<ServerPlayer> players) {
         PlayerClears clears = PlayerClears.get(source.getServer());
         Set<UUID> keys = new LinkedHashSet<>();
@@ -278,10 +249,6 @@ public final class LootrCommands {
         return players.size();
     }
 
-    /**
-     * A cleared player's client still shows loot frames they had taken as empty. Re-send the real item for
-     * the marked frames they can currently see, so they look lootable again without relogging.
-     */
     private static void refreshFrames(ServerPlayer player) {
         ServerLevel level = (ServerLevel) player.level();
         for (ItemFrame frame : level.getEntitiesOfClass(ItemFrame.class, player.getBoundingBox().inflate(160.0),
@@ -290,11 +257,6 @@ public final class LootrCommands {
         }
     }
 
-    /**
-     * {@code /lootr openers block|entity}: the players who have a loot menu open on this container right
-     * now. Reads the open menus themselves (see {@code Decay.viewers}), so it works for minecarts too and
-     * is exact: nothing to go stale if a player logs out or their menu is closed by another mod.
-     */
     private static int openers(CommandSourceStack source, ServerLevel level, @Nullable Object owner, String what) {
         if (owner == null) {
             source.sendFailure(Component.literal("There is no block entity at that position."));
@@ -314,7 +276,6 @@ public final class LootrCommands {
         return viewers.size();
     }
 
-    /** See the NeoForge twin; identical behavior. */
     private static int markFrame(CommandSourceStack source, Entity target, boolean mark) {
         if (!(target instanceof ItemFrame frame)) {
             source.sendFailure(Component.literal("That entity is not an item frame."));
@@ -344,7 +305,6 @@ public final class LootrCommands {
         return 1;
     }
 
-    /** The block entity at the given (loaded) position as a Target, or null if the block has none. */
     @Nullable
     private static Target blockAt(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         BlockEntity be = ctx.getSource().getLevel().getBlockEntity(BlockPosArgument.getLoadedBlockPos(ctx, "pos"));
@@ -356,14 +316,12 @@ public final class LootrCommands {
                 () -> be.getAttachedOrElse(ModAttachments.LOOT_STATE, new CompoundTag()),
                 tag -> {
                     be.setAttached(ModAttachments.LOOT_STATE, tag);
-                    // Block entities only save when marked dirty.
                     be.setChanged();
                 },
                 be);
     }
 
     private static Target of(Entity entity) {
-        // Entities are saved with their chunk automatically; no setChanged().
         return new Target(
                 () -> entity.getAttachedOrElse(ModAttachments.LOOT_STATE, new CompoundTag()),
                 tag -> entity.setAttached(ModAttachments.LOOT_STATE, tag),
@@ -400,11 +358,6 @@ public final class LootrCommands {
         target.write().accept(saved);
 
         if (entity instanceof ItemFrame frame) {
-            // ChunkMap's watcher query is not exposed with the same signature in
-            // Minecraft 1.21.1 mappings. Sending the normal entity-data update to
-            // all currently connected players is safe: clients ignore metadata for
-            // entities they are not tracking, and players who start tracking later
-            // receive the reset state normally from the entity spawn packet.
             for (ServerPlayer player : source.getServer().getPlayerList().getPlayers()) {
                 ItemFrameVisualSync.sendVisibleItem(player, frame);
             }
@@ -416,7 +369,6 @@ public final class LootrCommands {
         return hadAnything ? 1 : 0;
     }
 
-    /** Loads the state, or sends the failure message and returns null when there is none to act on. */
     @Nullable
     private static LootrLootState loadState(CommandSourceStack source, @Nullable Target target, String what) {
         if (target == null) {
@@ -434,10 +386,6 @@ public final class LootrCommands {
         return state;
     }
 
-    /**
-     * The refresh interval in force for this object: filtered by its loot table and dimension where it
-     * has a loot table (containers, pots, chest minecarts), otherwise the plain {@code refresh_value}.
-     */
     private static long refreshTicksOf(Object holder) {
         ResourceKey<LootTable> table;
         Level level;

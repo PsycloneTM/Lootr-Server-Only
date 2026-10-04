@@ -9,11 +9,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.function.BooleanSupplier;
 
-/**
- * Drives {@link Decay}'s once-a-second sweep. Fabric API's tick event lives in
- * {@code fabric-lifecycle-events-v1}, which this project avoids depending on, so
- * hook the end of {@code MinecraftServer.tickServer} directly. Not verified by a build.
- */
 @Mixin(MinecraftServer.class)
 public abstract class MixinMinecraftServer {
     @Inject(method = "tickServer", at = @At("RETURN"))

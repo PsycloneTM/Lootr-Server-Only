@@ -12,13 +12,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
-/**
- * {@code brushables_self_support}: a loot suspicious block skips its "is there air below me"
- * falling check, so removing the block under it no longer drops it. Wraps the single
- * {@code FallingBlock.isFree} call in {@code tick} (the other call, in {@code animateTick},
- * is client-side particles and is not touched). Same target upstream uses.
- * Not verified by a build.
- */
 @Mixin(BrushableBlock.class)
 public abstract class MixinBrushableBlock {
 

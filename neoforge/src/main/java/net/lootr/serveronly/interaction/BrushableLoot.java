@@ -28,32 +28,14 @@ import net.minecraft.world.phys.Vec3;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Per-player loot for suspicious sand/gravel, called from
- * {@code MixinBrushableBlockEntity}. Vanilla keeps ONE shared loot item and
- * turns the block into plain sand/gravel when the first player finishes
- * brushing. Here the block keeps its loot table for ever and never turns
- * into sand: each player (or team) who finishes brushing it once is rolled
- * their own loot, straight into their inventory. A player who has already
- * looted it can brush all day and nothing happens.
- * <p>
- * State is the same per-block-entity attachment the other containers use; an
- * all-empty entry is the "already looted" marker (same as pots).
- * <p>
- * Shared on purpose: the dust animation and the completion sound/particles are
- * visible to everyone nearby, and finishing resets the block's dust level for
- * all players. Not verified by a build or playtest.
- */
 public final class BrushableLoot {
 
-    /** True when this brushable is a loot block Lootr manages in this dimension. */
     public static boolean isManaged(BrushableBlockEntity be, ResourceKey<LootTable> lootTable) {
         return ModLootTags.isTableEnabled(lootTable)
                 && be.getLevel() instanceof ServerLevel level
                 && LootrConfig.isDimensionEnabled(level.dimension());
     }
 
-    /** True if {@code player} must not make brushing progress (already looted it). */
     public static boolean alreadyLooted(BrushableBlockEntity be, ResourceKey<LootTable> lootTable, Player player) {
         if (!isManaged(be, lootTable) || !(player instanceof ServerPlayer sp) || sp.isSpectator()) {
             return false;
@@ -66,7 +48,6 @@ public final class BrushableLoot {
         return false;
     }
 
-    /** Called when {@code player} finishes brushing; replaces vanilla's shared drop. */
     public static void complete(BrushableBlockEntity be, ResourceKey<LootTable> tableKey, Player player) {
         if (!(player instanceof ServerPlayer sp) || !(be.getLevel() instanceof ServerLevel level)) {
             return;
@@ -86,7 +67,6 @@ public final class BrushableLoot {
                     .create(LootContextParamSets.CHEST);
             List<ItemStack> loot = LootRoller.roll(table, params, 0L);
 
-            // Mark as looted before handing anything out so a failure can never allow a second roll.
             state.setContents(lootKey, NonNullList.withSize(state.getContainerSize(), ItemStack.EMPTY));
             state.markFirstGeneratedIfAbsent(level.getGameTime());
             persist(be, state, level);

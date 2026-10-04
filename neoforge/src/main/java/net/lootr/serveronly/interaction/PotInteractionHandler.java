@@ -32,33 +32,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Per-player loot for decorated pots (trail-ruins pots, ancient-city pots and
- * any pot given a loot table by a datapack or structure).
- * <p>
- * Unlike the four container blocks, a pot never opens a menu: vanilla resolves
- * its loot table when the pot is broken, dropping the items into the world for
- * whoever hit it first, and the pot is gone for everyone else. So this handler
- * substitutes the whole interaction instead of swapping a Container. The first
- * time a given player (or team) hits or right-clicks a loot pot, they are
- * rolled their own loot, which goes straight into their inventory (overflow
- * drops at their feet) while the pot wobbles and the shatter sound plays. The
- * pot itself is never removed, so every other player still finds it intact.
- * A player who has already looted it just gets the "won't take that" wobble.
- * <p>
- * Loot state is the same per-block-entity attachment the containers use; an
- * all-empty entry is the "already looted" marker, which
- * {@link LootrLootState} keeps and saves like any other.
- * <p>
- * <b>Unverified at time of writing (needs a real playtest):</b> cancelling
- * {@code LeftClickBlock} stops the server breaking the pot, but a vanilla
- * client predicts the break locally. Whether that client-side prediction is
- * reverted cleanly, and whether a sherd-decorated pot keeps its sherds
- * afterwards, was not confirmed. The exact {@code LeftClickBlock} members
- * used here ({@code getPos}, {@code getEntity}, and its cancel semantics)
- * were written from the documented event shape without a NeoForge jar to
- * check against - the compiler is the first real check.
- */
 @EventBusSubscriber(modid = LootrServerOnly.MOD_ID)
 public final class PotInteractionHandler {
 
@@ -73,9 +46,6 @@ public final class PotInteractionHandler {
         if (pot == null || isPlacingBlockAgainst(player)) {
             return;
         }
-        // Cancel for BOTH hands. The event fires once per hand, and letting
-        // the off-hand pass through could let vanilla insert the off-hand
-        // item into the pot and resolve its loot table for everyone.
         event.setCanceled(true);
         event.setCancellationResult(InteractionResult.CONSUME);
         if (event.getHand() == InteractionHand.MAIN_HAND) {
@@ -85,7 +55,6 @@ public final class PotInteractionHandler {
 
     @SubscribeEvent
     public static void onLeftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
-        // Creative players are left alone so an admin can still remove a pot.
         if (event.getLevel().isClientSide() || !(event.getEntity() instanceof ServerPlayer player)
                 || player.isSpectator() || player.isCreative()) {
             return;
@@ -99,7 +68,6 @@ public final class PotInteractionHandler {
         smash(player, pot, level);
     }
 
-    /** The pot at {@code pos} if it still has an unresolved loot table and this dimension is enabled. */
     @Nullable
     private static DecoratedPotBlockEntity lootPotAt(ServerLevel level, BlockPos pos) {
         if (!LootrConfig.isDimensionEnabled(level.dimension())) {
@@ -112,7 +80,6 @@ public final class PotInteractionHandler {
         return null;
     }
 
-    /** Sneaking with something in a hand makes vanilla skip the block's own interaction. */
     private static boolean isPlacingBlockAgainst(ServerPlayer player) {
         return player.isSecondaryUseActive()
                 && (!player.getMainHandItem().isEmpty() || !player.getOffhandItem().isEmpty());
@@ -135,7 +102,7 @@ public final class PotInteractionHandler {
 
         ResourceKey<LootTable> tableKey = pot.getLootTable();
         if (tableKey == null) {
-            return; // cannot happen after lootPotAt, but never NPE on a server thread
+            return;
         }
         LootTable table = level.getServer().reloadableRegistries().getLootTable(tableKey);
         UnresolvedTables.check(player, tableKey, table);
@@ -147,8 +114,6 @@ public final class PotInteractionHandler {
                 .create(LootContextParamSets.CHEST);
         List<ItemStack> loot = LootRoller.roll(table, params, pot.getLootTableSeed());
 
-        // Record "looted" before handing anything out, so a failure while
-        // giving items can never let the same player roll twice.
         state.setContents(lootKey, NonNullList.withSize(state.getContainerSize(), ItemStack.EMPTY));
         state.markFirstGeneratedIfAbsent(level.getGameTime());
         pot.setChanged();

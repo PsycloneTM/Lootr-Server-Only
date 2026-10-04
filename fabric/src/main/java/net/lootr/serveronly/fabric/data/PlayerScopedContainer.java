@@ -9,24 +9,6 @@ import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-/**
- * A plain vanilla {@link Container}. This is the entire trick that makes the
- * "unique loot per player" mechanic work with zero client-side code: vanilla's
- * {@link net.minecraft.world.inventory.ChestMenu} (and ShulkerBoxMenu, etc.)
- * only ever ask the {@link Container} they were built with for items -
- * they don't care whether that container is "the real block" or a per-player
- * view over server-only data. A vanilla client rendering that menu has no
- * way to tell the difference.
- * <p>
- * One instance of this class is created per (block, player) pair, lazily,
- * the moment a specific player opens the container - see
- * {@link net.lootr.serveronly.fabric.interaction.ContainerInteractionHandler}.
- * <p>
- * Identical, loader-agnostic port of the NeoForge side's
- * {@code net.lootr.serveronly.data.PlayerScopedContainer} - this class has
- * no NeoForge or Fabric API imports at all, so it is copied verbatim rather
- * than reimplemented.
- */
 public class PlayerScopedContainer implements Container {
     private final LootrLootState state;
     private final UUID playerId;
@@ -42,10 +24,6 @@ public class PlayerScopedContainer implements Container {
         this(state, playerId, onChanged, stillValid, null, null);
     }
 
-    /**
-     * {@code onOpen}/{@code onClose} (nullable) run when vanilla's menu calls
-     * {@code startOpen}/{@code stopOpen}; used to animate the real block.
-     */
     public PlayerScopedContainer(LootrLootState state, UUID playerId, Consumer<NonNullList<ItemStack>> onChanged,
                                  Predicate<Player> stillValid, Consumer<Player> onOpen, Consumer<Player> onClose) {
         this.onOpen = onOpen;
@@ -54,7 +32,6 @@ public class PlayerScopedContainer implements Container {
         this.playerId = playerId;
         this.onChanged = onChanged;
         this.stillValid = stillValid;
-        // Work on a live, mutable copy; written back via setChanged().
         this.live = state.getContentsOrEmpty(playerId);
     }
 
@@ -105,17 +82,9 @@ public class PlayerScopedContainer implements Container {
 
     @Override
     public boolean stillValid(Player player) {
-        // Vanilla closes a menu the moment this returns false, so it must answer
-        // "may this player still use the real container?" - distance, and that the
-        // block or entity still exists - NOT "is this the key's owner?".
-        // `playerId` is the LOOT key, which is a team's id when team loot is on, so
-        // comparing it to player.getUUID() was always false for team members and
-        // closed their menu the instant it opened; with team loot off it was always
-        // true, so nothing ever checked range or that the chest still existed.
         return stillValid.test(player);
     }
 
-    /** Tags this view with the block entity / entity it belongs to (used by decay to see who has it open). */
     public PlayerScopedContainer owner(Object owner) {
         this.owner = owner;
         return this;

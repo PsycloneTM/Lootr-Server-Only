@@ -11,18 +11,7 @@ import net.lootr.serveronly.fabric.interaction.MinecartInteractionHandler;
 import net.lootr.serveronly.fabric.interaction.PotInteractionHandler;
 import org.slf4j.Logger;
 
-/**
- * Fabric entry point.
- *
- * <p>Registers {@link ContainerInteractionHandler} against
- * {@code UseBlockCallback}, bringing chest/trapped-chest/barrel/shulker-box
- * per-player loot generation to parity with the NeoForge side. No new
- * Block/Item/BlockEntityType is registered here or anywhere else in this
- * mod - see fabric/build.gradle's top comment for why that's the load-
- * bearing constraint that keeps this mod's client-optionality intact.</p>
- */
 public final class LootrServerOnlyFabric implements ModInitializer {
-    // Delegates to the shared constants so loader-independent code can use the same values.
     public static final String MOD_ID = LootrServerOnlyConstants.MOD_ID;
     public static final Logger LOGGER = LootrServerOnlyConstants.LOGGER;
 

@@ -13,13 +13,6 @@ import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
 
-/**
- * Reproduces Lootr's per-player item-frame visuals without requiring a client mod.
- *
- * <p>The real ItemFrame entity keeps its actual framed item so other players can
- * still loot it. We send only the looting player a normal entity metadata update
- * whose DATA_ITEM is empty, so vanilla renders an empty frame for that player.</p>
- */
 public final class ItemFrameVisualSync {
 
     public static void hideIfLooted(ServerPlayer player, ItemFrame frame) {
@@ -37,7 +30,6 @@ public final class ItemFrameVisualSync {
         sendItem(player, ItemStack.EMPTY, frame);
     }
 
-    /** Restores the server-side framed item in a client that previously saw it hidden. */
     public static void sendVisibleItem(ServerPlayer player, ItemFrame frame) {
         sendItem(player, frame.getItem().copy(), frame);
     }

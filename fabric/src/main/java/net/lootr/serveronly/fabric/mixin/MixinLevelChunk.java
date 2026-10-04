@@ -8,11 +8,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Chunk-load hook for {@link ChunkDiscovery}. {@code registerTickContainerInLevel} is called exactly once,
- * on the server thread, when a chunk becomes a full level chunk (right next to where NeoForge fires
- * {@code ChunkEvent.Load}). Not verified by a build.
- */
 @Mixin(LevelChunk.class)
 public abstract class MixinLevelChunk {
     @Inject(method = "registerTickContainerInLevel", at = @At("RETURN"))

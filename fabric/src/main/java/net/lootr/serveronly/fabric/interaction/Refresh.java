@@ -24,30 +24,8 @@ import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
 
 import java.util.List;
 
-/**
- * Background refresh, the twin of {@link Decay}'s sweep: loot containers whose refresh timer has run
- * out are reset (every player's loot forgotten, timer cleared) without anyone having to open them.
- * <p>
- * Same design as decay: block containers are found through {@link RefreshTracker} (a saved position set
- * filled when a container is looted or opened, and, with {@code start_refresh_while_ticking}, when its
- * chunk loads - see {@link ChunkDiscovery}); unloaded chunks are skipped, never loaded; chest minecarts
- * are found by listing the loaded ones. It runs from {@link Decay}'s tick entry every {@code tick_delay}
- * ticks, after the decay sweep.
- * <p>
- * <b>Never while the menu is open.</b> Resetting a container under a player who is looking inside it
- * would empty the logical inventory their menu is backed by (upstream has an open issue about exactly
- * this). A due container that someone is viewing is left alone and refreshed on a later sweep, or on the
- * next open, once the menu has closed. {@link #refreshIfDue} gives the open-time paths the same rule.
- * <p>
- * Pots and suspicious blocks are not swept: their only stored state is an "already looted" marker nobody
- * can observe, so refreshing them when next touched is equivalent. Not verified by a build.
- */
 public final class Refresh {
 
-    /**
-     * Open-time refresh with the viewing rule: resets {@code state} if its timer is due AND nobody has
-     * {@code owner} open. Returns true only if it actually reset.
-     */
     public static boolean refreshIfDue(ServerLevel level, Object owner, LootrLootState state, long refreshTicks) {
         long now = level.getGameTime();
         if (!state.refreshDue(now, refreshTicks) || Decay.isViewed(level, owner)) {
@@ -56,8 +34,6 @@ public final class Refresh {
         return state.refreshIfDue(now, refreshTicks);
     }
 
-
-    /** Fires the add-on refresh event after a successful reset has been applied. */
     public static void notifyRefreshed(ServerLevel level, Object owner) {
         if (owner instanceof BlockEntity blockEntity) {
             LootListeners.refreshed(level, owner, blockEntity.getBlockPos(), lootTableOf(owner));
@@ -83,19 +59,15 @@ public final class Refresh {
         return null;
     }
 
-    /** Remember this container so the background sweep checks it. Call after its loot has been rolled. */
     public static void track(ServerLevel level, RandomizableContainerBlockEntity container) {
         if (LootrConfig.refreshTicksFor(level, container.getBlockPos(), container.getLootTable()) > 0) {
             RefreshTracker.get(level.getServer()).add(level.dimension(), container.getBlockPos());
         }
     }
 
-    // ---- the sweep -----------------------------------------------------------
-
-    /** Called from {@link Decay}'s tick entry every {@code tick_delay} ticks. */
     static void sweep(MinecraftServer server) {
         if (!(LootrConfig.performRefreshWhileTicking() && LootrConfig.refreshTicks() > 0)) {
-            return; // off: leave the tracker alone so turning it back on still finds everything
+            return;
         }
         PositionTracker tracker = RefreshTracker.get(server);
         tracker.syncSetting(LootrConfig.refreshTicks());
@@ -109,42 +81,38 @@ public final class Refresh {
         failureLogged = false;
     }
 
-    /** How long to leave a position alone when its chunk is unloaded or outside the world border. */
     private static final long DEFER_TICKS = 200;
 
     private static void sweepBlocks(ServerLevel level, PositionTracker tracker) {
         long now = level.getGameTime();
         var dimension = level.dimension();
-        // Only positions whose "check at" hint has arrived come back; the rest cost nothing this sweep.
         for (BlockPos pos : tracker.takeDue(dimension, now)) {
             try {
-                // getBlockEntity would LOAD (or even generate) the chunk. Wait for it instead; the chunk-load
-                // hook (ChunkDiscovery) wakes the position the moment that chunk loads.
                 if (!level.hasChunkAt(pos)) {
                     tracker.schedule(dimension, pos, now + DEFER_TICKS);
                     continue;
                 }
                 if (LootrConfig.checkWorldBorder() && !level.getWorldBorder().isWithinBounds(pos)) {
-                    tracker.schedule(dimension, pos, now + DEFER_TICKS); // check_world_border
+                    tracker.schedule(dimension, pos, now + DEFER_TICKS);
                     continue;
                 }
                 CompoundTag saved;
                 if (!(level.getBlockEntity(pos) instanceof RandomizableContainerBlockEntity container)
                         || ContainerInteractionHandler.kindOf(container) == null
                         || (saved = container.getAttached(ModAttachments.LOOT_STATE)) == null) {
-                    continue; // broken, replaced, or never a loot container: not handed back, so no longer tracked
+                    continue;
                 }
                 long first = LootrLootState.peekFirstGeneratedGameTime(saved);
                 int ticks = LootrConfig.refreshTicksFor(level, pos, container.getLootTable());
                 if (first < 0 || ticks <= 0) {
-                    continue; // reset, or no longer covered by the config: no longer tracked
+                    continue;
                 }
                 if (now - first < ticks) {
-                    tracker.schedule(dimension, pos, first + ticks); // the real deadline, from the container's own timer
+                    tracker.schedule(dimension, pos, first + ticks);
                     continue;
                 }
                 if (Decay.isViewed(level, container)) {
-                    tracker.schedule(dimension, pos, now + 1); // deferred until the menu closes
+                    tracker.schedule(dimension, pos, now + 1);
                     continue;
                 }
                 HolderLookup.Provider provider = level.registryAccess();
@@ -157,10 +125,9 @@ public final class Refresh {
                     container.setChanged();
                     notifyRefreshed(level, container);
                 }
-                // timer cleared and not handed back; the next loot starts and tracks a new one
             } catch (RuntimeException e) {
-                tracker.schedule(dimension, pos, now + DEFER_TICKS); // do not lose it; try again shortly
-                logFailure(e); // one bad container must not stop the rest refreshing
+                tracker.schedule(dimension, pos, now + DEFER_TICKS);
+                logFailure(e);
             }
         }
     }
@@ -191,7 +158,6 @@ public final class Refresh {
         }
     }
 
-    /** Set after a failure is logged so a persistent fault is reported once, not once per sweep. */
     private static boolean failureLogged = false;
 
     private static void logFailure(RuntimeException e) {

@@ -33,20 +33,6 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
 import java.util.UUID;
 
-/**
- * Per-player loot for chest minecarts (e.g. mineshaft carts) - the entity
- * counterpart of {@link ContainerInteractionHandler}.
- * <p>
- * A {@link MinecartChest} implements vanilla's {@code ContainerEntity}: it has
- * a {@code getLootTable()} and opens a plain {@code ChestMenu.threeRows}, so
- * it fits the same "cancel the click, open a menu backed by a per-player
- * Container" pattern as the four block containers. The only differences are
- * the event ({@code EntityInteract}) and that the state lives on an entity
- * attachment instead of a block-entity attachment. Cancelling before vanilla
- * runs matters just as much as for blocks: vanilla's own path would unpack the
- * loot table into the shared item list for the first player and clear it for
- * everyone else.
- */
 @EventBusSubscriber(modid = LootrServerOnly.MOD_ID)
 public final class MinecartInteractionHandler {
 
@@ -55,8 +41,6 @@ public final class MinecartInteractionHandler {
         if (event.getLevel().isClientSide()) {
             return;
         }
-        // The event fires once per hand; only act on the main hand so the
-        // menu isn't opened twice.
         if (event.getHand() != net.minecraft.world.InteractionHand.MAIN_HAND) {
             return;
         }
@@ -71,7 +55,7 @@ public final class MinecartInteractionHandler {
             return;
         }
         if (!ModLootTags.isTableEnabled(cart.getLootTable())) {
-            return; // not a loot cart, already looted by vanilla, or blacklisted - leave alone
+            return;
         }
         if (player.isSpectator()) {
             return;
@@ -91,7 +75,7 @@ public final class MinecartInteractionHandler {
         }
         ServerLevel level = (ServerLevel) player.level();
         if (!LootrConfig.isDimensionEnabled(level.dimension()) || !ModLootTags.isTableEnabled(cart.getLootTable())) {
-            return; // not a loot cart, already looted by vanilla, or blacklisted - leave alone
+            return;
         }
         if (handleAttack(player, cart, level)) {
             event.setCanceled(true);
@@ -101,14 +85,11 @@ public final class MinecartInteractionHandler {
     private static void open(ServerPlayer player, MinecartChest cart, ServerLevel level) {
         LootrLootState state = cart.getData(ModAttachments.LOOT_STATE);
         UUID lootKey = TeamResolver.resolve(player);
-        // Entities are saved with their chunk automatically, so unlike the
-        // block-entity handler there is no setChanged() to call after
-        // mutating the attachment.
         if (Refresh.refreshIfDue(level, cart, state, LootrConfig.refreshTicksFor(level, cart.blockPosition(), cart.getLootTable()))) {
             Refresh.notifyRefreshed(level, cart);
         }
         if (Decay.decayIfDue(level, cart, state)) {
-            return; // past its deadline: it decays instead of opening
+            return;
         }
         boolean first = !state.hasGeneratedFor(lootKey);
         if (first) {
@@ -122,14 +103,9 @@ public final class MinecartInteractionHandler {
         }
 
         PlayerScopedContainer container = new PlayerScopedContainer(state, lootKey, items -> { },
-                // Same shape as vanilla: still present and within reach.
                 p -> !cart.isRemoved() && p.distanceToSqr(cart) <= 64.0,
                 null,
-                // MinecartChest.stopOpen: a vanilla cart sends this when a player closes it. Also runs when a
-                // player disconnects with the menu open, as in vanilla.
                 p -> level.gameEvent(GameEvent.CONTAINER_CLOSE, cart.position(), GameEvent.Context.of(p))).owner(cart);
-        // What vanilla's MinecartChest.interact does after a successful open: the CONTAINER_OPEN game event
-        // (sculk sensors, wardens) and angering nearby piglins. The close event is sent from stopOpen below.
         if (player.openMenu(new SimpleMenuProvider(
                 (id, inventory, p) -> ChestMenu.threeRows(id, inventory, container),
                 cart.getDisplayName())).isPresent()) {
@@ -161,17 +137,6 @@ public final class MinecartInteractionHandler {
         LootListeners.looted(level, cart, cart.blockPosition(), player, key);
     }
 
-
-    /**
-     * What a player hitting a managed chest minecart does, in the same order as {@code ContainerProtection}'s block
-     * rules: {@code enable_break} (or a fake player with {@code enable_fake_player_break}) allows it;
-     * {@code break_to_drop_loot} gives a non-sneaking real player their own loot and cancels the hit;
-     * {@code disable_break} refuses survival always and creative unless sneaking; otherwise
-     * {@code protect_containers} refuses, and failing that {@code require_sneak_to_break} refuses a
-     * non-sneaking hit. If the hit goes ahead and {@code should_drop_player_loot} is on, the hitter's loot
-     * drops at the cart first. With every option at its default survival cannot break a cart (the existing
-     * invulnerability) and creative can. Returns true if the hit must be cancelled.
-     */
     private static boolean handleAttack(ServerPlayer player, MinecartChest cart, ServerLevel level) {
         if (player.isSpectator()) {
             return false;
@@ -206,7 +171,6 @@ public final class MinecartInteractionHandler {
             }
         }
 
-        // The hit goes ahead.
         if (LootrConfig.SHOULD_DROP_PLAYER_LOOT.get() && !fake) {
             for (ItemStack stack : takeLoot(player, cart, level)) {
                 cart.spawnAtLocation(stack);
@@ -215,11 +179,6 @@ public final class MinecartInteractionHandler {
         return false;
     }
 
-    /**
-     * Takes this player's (or team's) loot out of {@code cart} WITHOUT opening a menu: rolls it if they have not
-     * looted it yet and empties their entry in place, leaving it behind so the cart counts as looted for them.
-     * The chest-minecart twin of {@code ContainerInteractionHandler.takeLoot}.
-     */
     public static List<ItemStack> takeLoot(ServerPlayer player, MinecartChest cart, ServerLevel level) {
         LootrLootState state = cart.getData(ModAttachments.LOOT_STATE);
         UUID lootKey = TeamResolver.resolve(player);
@@ -238,11 +197,10 @@ public final class MinecartInteractionHandler {
                 contents.set(i, ItemStack.EMPTY);
             }
         }
-        state.setContents(lootKey, contents); // entity attachments are saved with the entity
+        state.setContents(lootKey, contents);
         return taken;
     }
 
-    /** The "break to drop loot" action for carts: the loot goes straight into the player's inventory. */
     public static void collectLoot(ServerPlayer player, MinecartChest cart, ServerLevel level) {
         List<ItemStack> loot = takeLoot(player, cart, level);
         for (ItemStack stack : loot) {

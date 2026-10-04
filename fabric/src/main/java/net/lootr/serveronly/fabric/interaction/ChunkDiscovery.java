@@ -18,14 +18,6 @@ import net.minecraft.world.level.storage.loot.LootTable;
 
 import java.util.ArrayList;
 
-/**
- * {@code start_decay_while_ticking} / {@code start_refresh_while_ticking}: when a chunk loads, containers in it
- * that were already looted (they have a first-looted time) but are not yet in the decay / refresh tracker are
- * added, so they are handled without anyone opening them again. Called from {@code MixinLevelChunk} (Fabric
- * API's chunk-load event lives in {@code fabric-lifecycle-events-v1}, which this project avoids). It only
- * looks at the one chunk that just loaded and does nothing unless a start toggle is on and its feature is
- * enabled. Not verified by a build.
- */
 public final class ChunkDiscovery {
 
     public static void onChunkLoaded(ServerLevel level, LevelChunk chunk) {
@@ -38,11 +30,6 @@ public final class ChunkDiscovery {
         scan(level, chunk, decay, refresh);
     }
 
-    /**
-     * Positions the sweeps deferred because their chunk was unloaded become due the moment it loads, so a container
-     * that expired meanwhile is handled on the next sweep. Independent of the start toggles, and a no-op (no file
-     * is read) when nothing is tracked in that chunk's region.
-     */
     private static void wakeTracked(ServerLevel level, LevelChunk chunk) {
         try {
             MinecraftServer server = level.getServer();
@@ -60,7 +47,6 @@ public final class ChunkDiscovery {
         }
     }
 
-    /** Outcome of one scan: containers found that were already looted, and how many were newly tracked. */
     public record Scan(int looted, int decayAdded, int refreshAdded) {
         public static final Scan NONE = new Scan(0, 0, 0);
 
@@ -69,26 +55,17 @@ public final class ChunkDiscovery {
         }
     }
 
-    /** Decay is on at all ({@code decay_value} above 0). The {@code force_*} commands ignore the start toggle. */
     public static boolean decayEnabled() {
         return LootrConfig.decayTicks() > 0;
     }
 
-    /** Refresh is on at all ({@code refresh_value} above 0). The {@code force_*} commands ignore the start toggle. */
     public static boolean refreshEnabled() {
         return LootrConfig.refreshTicks() > 0;
     }
 
-    /**
-     * Adds the already-looted containers of one chunk to the decay and/or refresh tracker. Shared by the
-     * chunk-load hook above (which only calls it when a start toggle is on) and the {@code /lootr force_*}
-     * commands (which call it regardless of the toggles). Only looks at the chunk it is given; never loads one.
-     * Trackers are sets, so scanning the same chunk twice is harmless; only positions that were not already
-     * tracked are counted as added.
-     */
     public static Scan scan(ServerLevel level, LevelChunk chunk, boolean decay, boolean refresh) {
         if (LootrConfig.checkWorldBorder() && !level.getWorldBorder().isWithinBounds(chunk.getPos())) {
-            return Scan.NONE; // check_world_border
+            return Scan.NONE;
         }
         int looted = 0;
         int decayAdded = 0;
@@ -105,7 +82,6 @@ public final class ChunkDiscovery {
                     looted++;
                     BlockPos pos = container.getBlockPos();
                     ResourceKey<LootTable> table = container.getLootTable();
-                    // Same gates as Decay.track / Refresh.track, repeated here only so additions can be counted.
                     if (decay && Decay.covers(level, pos, table)
                             && DecayTracker.get(server).add(level.dimension(), pos)) {
                         decayAdded++;
@@ -117,7 +93,6 @@ public final class ChunkDiscovery {
                 }
             }
         } catch (RuntimeException e) {
-            // An exception escaping chunk loading (or a command) would be far worse than a missed container.
             LootrServerOnlyFabric.LOGGER.error("Could not scan a chunk for loot containers; skipping it.", e);
         }
         return new Scan(looted, decayAdded, refreshAdded);

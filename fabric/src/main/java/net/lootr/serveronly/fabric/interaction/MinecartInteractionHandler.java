@@ -40,13 +40,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
 
-/**
- * Fabric twin of the NeoForge {@code MinecartInteractionHandler}; see that
- * class for the reasoning. Differences: {@link UseEntityCallback} instead of
- * {@code EntityInteract}, and the Fabric attachment stores a raw
- * {@link CompoundTag}, so state is loaded, mutated and written back by hand
- * exactly as {@link ContainerInteractionHandler} does for blocks.
- */
 public final class MinecartInteractionHandler {
 
     public static void register() {
@@ -73,7 +66,6 @@ public final class MinecartInteractionHandler {
         return InteractionResult.CONSUME;
     }
 
-    /** SUCCESS (not FAIL) cancels vanilla's hit but still lets the packet through, as the item-frame handler does. */
     private static InteractionResult onAttackEntity(Player player, Level world, InteractionHand hand,
                                                     Entity entity, @Nullable EntityHitResult hit) {
         if (world.isClientSide() || !(player instanceof ServerPlayer serverPlayer) || !(entity instanceof MinecartChest cart)) {
@@ -81,7 +73,7 @@ public final class MinecartInteractionHandler {
         }
         ServerLevel level = (ServerLevel) world;
         if (!LootrConfig.isDimensionEnabled(level.dimension()) || !ModLootTags.isTableEnabled(cart.getLootTable())) {
-            return InteractionResult.PASS; // not a loot cart, already looted by vanilla, or blacklisted - leave alone
+            return InteractionResult.PASS;
         }
         return handleAttack(serverPlayer, cart, level) ? InteractionResult.SUCCESS : InteractionResult.PASS;
     }
@@ -98,7 +90,7 @@ public final class MinecartInteractionHandler {
             Refresh.notifyRefreshed(level, cart);
         }
         if (Decay.decayIfDue(level, cart, state)) {
-            return; // past its deadline: it decays instead of opening
+            return;
         }
         boolean first = !state.hasGeneratedFor(lootKey);
         if (first) {
@@ -114,14 +106,9 @@ public final class MinecartInteractionHandler {
 
         PlayerScopedContainer container = new PlayerScopedContainer(state, lootKey,
                 items -> persist(cart, state, provider),
-                // Same shape as vanilla: still present and within reach.
                 p -> !cart.isRemoved() && p.distanceToSqr(cart) <= 64.0,
                 null,
-                // MinecartChest.stopOpen: a vanilla cart sends this when a player closes it. Also runs when a
-                // player disconnects with the menu open, as in vanilla.
                 p -> level.gameEvent(GameEvent.CONTAINER_CLOSE, cart.position(), GameEvent.Context.of(p))).owner(cart);
-        // What vanilla's MinecartChest.interact does after a successful open: the CONTAINER_OPEN game event
-        // (sculk sensors, wardens) and angering nearby piglins. The close event is sent from stopOpen below.
         if (player.openMenu(new SimpleMenuProvider(
                 (id, inventory, p) -> ChestMenu.threeRows(id, inventory, container),
                 cart.getDisplayName())).isPresent()) {
@@ -159,17 +146,6 @@ public final class MinecartInteractionHandler {
         LootListeners.looted(level, cart, cart.blockPosition(), player, key);
     }
 
-
-    /**
-     * What a player hitting a managed chest minecart does, in the same order as {@code ContainerProtection}'s block
-     * rules: {@code enable_break} (or a fake player with {@code enable_fake_player_break}) allows it;
-     * {@code break_to_drop_loot} gives a non-sneaking real player their own loot and cancels the hit;
-     * {@code disable_break} refuses survival always and creative unless sneaking; otherwise
-     * {@code protect_containers} refuses, and failing that {@code require_sneak_to_break} refuses a
-     * non-sneaking hit. If the hit goes ahead and {@code should_drop_player_loot} is on, the hitter's loot
-     * drops at the cart first. With every option at its default survival cannot break a cart (the existing
-     * invulnerability) and creative can. Returns true if the hit must be cancelled.
-     */
     private static boolean handleAttack(ServerPlayer player, MinecartChest cart, ServerLevel level) {
         if (player.isSpectator()) {
             return false;
@@ -204,7 +180,6 @@ public final class MinecartInteractionHandler {
             }
         }
 
-        // The hit goes ahead.
         if (LootrConfig.shouldDropPlayerLoot() && !fake) {
             for (ItemStack stack : takeLoot(player, cart, level)) {
                 cart.spawnAtLocation(stack);
@@ -213,11 +188,6 @@ public final class MinecartInteractionHandler {
         return false;
     }
 
-    /**
-     * Takes this player's (or team's) loot out of {@code cart} WITHOUT opening a menu: rolls it if they have not
-     * looted it yet and empties their entry in place, leaving it behind so the cart counts as looted for them.
-     * The chest-minecart twin of {@code ContainerInteractionHandler.takeLoot}.
-     */
     public static List<ItemStack> takeLoot(ServerPlayer player, MinecartChest cart, ServerLevel level) {
         HolderLookup.Provider provider = level.registryAccess();
         LootrLootState state = new LootrLootState(27);
@@ -244,7 +214,6 @@ public final class MinecartInteractionHandler {
         return taken;
     }
 
-    /** The "break to drop loot" action for carts: the loot goes straight into the player's inventory. */
     public static void collectLoot(ServerPlayer player, MinecartChest cart, ServerLevel level) {
         List<ItemStack> loot = takeLoot(player, cart, level);
         for (ItemStack stack : loot) {

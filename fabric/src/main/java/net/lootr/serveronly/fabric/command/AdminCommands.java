@@ -71,27 +71,9 @@ import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-/**
- * The upstream-parity operator commands that are not about one existing container (those live in
- * {@link LootrCommands}); registered into the same {@code /lootr} root, permission level 2.
- * <ul>
- *     <li>{@code /lootr chest|barrel|trapped_chest|shulker|pot|gravel|sand|cart [<table>]} - create a loot
- *     container of that kind at the command's position. Everything placed is a plain vanilla block or entity
- *     with a vanilla loot table, so the normal "is this managed" rules apply to it unchanged (audit P2-4).</li>
- *     <li>{@code /lootr force_chunk}, {@code force_radius <radius>}, {@code force_all} - run the chunk-load
- *     discovery scan on demand so already-looted containers join the decay / refresh trackers even with the
- *     {@code start_*_while_ticking} toggles off (audit P2-5).</li>
- *     <li>{@code /lootr open_as <player> block <pos>|entity <target>} and {@code open_as_uuid <uuid> ...} - show
- *     what a player (or team) has left in a container, read-only (audit P2-6).</li>
- * </ul>
- * Not verified by a build.
- */
 public final class AdminCommands {
 
-    /** Largest {@code force_radius}: a 33 x 33 square of chunks. */
     private static final int MAX_FORCE_RADIUS = 16;
-
-    // ------------------------------------------------------------------ registration
 
     public static void addTo(LiteralArgumentBuilder<CommandSourceStack> root) {
         for (Spawn type : Spawn.values()) {
@@ -124,15 +106,11 @@ public final class AdminCommands {
         root.then(Commands.literal("open_as_uuid").then(byUuid));
     }
 
-    // ------------------------------------------------------------------ P2-4: spawn
-
-    /** The creatable kinds, with the table-path prefixes that suit each (the same families upstream offers). */
     private enum Spawn {
         CHEST("chest", "chest", Blocks.CHEST, "chests/"),
         TRAPPED_CHEST("trapped_chest", "trapped chest", Blocks.TRAPPED_CHEST, "chests/"),
         BARREL("barrel", "barrel", Blocks.BARREL, "chests/"),
         SHULKER("shulker", "shulker box", Blocks.SHULKER_BOX, "chests/"),
-        // Pots in this project accept any table; chests/ is the sensible family, pots/ is vanilla's own.
         POT("pot", "decorated pot", Blocks.DECORATED_POT, "chests/", "pots/"),
         GRAVEL("gravel", "suspicious gravel", Blocks.SUSPICIOUS_GRAVEL, "archaeology/"),
         SAND("sand", "suspicious sand", Blocks.SUSPICIOUS_SAND, "archaeology/"),
@@ -161,14 +139,12 @@ public final class AdminCommands {
         return (ResourceKey<LootTable>) key;
     }
 
-    /** Every loot table the server knows, unfiltered. */
     private static List<ResourceKey<LootTable>> allTables(MinecraftServer server) {
         return server.reloadableRegistries().lookup().lookup(Registries.LOOT_TABLE)
                 .map(o -> (HolderLookup<LootTable>) o).map(HolderLookup::listElementIds)
                 .orElse(Stream.of()).toList();
     }
 
-    /** The tables suited to {@code type} that the loot-table filters leave managed (so the container will be per-player). */
     private static List<ResourceKey<LootTable>> tablesFor(MinecraftServer server, Spawn type) {
         List<ResourceKey<LootTable>> out = new ArrayList<>();
         for (ResourceKey<LootTable> key : allTables(server)) {
@@ -264,8 +240,6 @@ public final class AdminCommands {
         return true;
     }
 
-    // ------------------------------------------------------------------ P2-5: force_*
-
     private static int forceChunk(CommandSourceStack source) {
         ServerLevel level = source.getLevel();
         ChunkPos center = new ChunkPos(BlockPos.containing(source.getPosition()));
@@ -286,14 +260,6 @@ public final class AdminCommands {
         return forceScan(source, Map.of(level, chunks));
     }
 
-    /**
-     * "Every loaded chunk", without reaching into the chunk map: the square of chunks around each online player
-     * out to the server's view distance, plus the chunks held by {@code /forceload}. Chunks that are kept loaded
-     * some other way, far from every player, are not reached here (they are still picked up by the chunk-load
-     * hook when they load, if a start toggle is on). Nothing is loaded or generated: chunks that are not fully
-     * loaded are skipped. One pass on the server thread, no I/O: the work is one look at each loaded chunk's
-     * block-entity list.
-     */
     private static int forceAll(CommandSourceStack source) {
         MinecraftServer server = source.getServer();
         int viewDistance = server.getPlayerList().getViewDistance();
@@ -338,7 +304,6 @@ public final class AdminCommands {
             }
             for (long packed : entry.getValue()) {
                 ChunkPos pos = new ChunkPos(packed);
-                // false = never load or generate; only chunks that are already fully loaded.
                 ChunkAccess access = level.getChunkSource().getChunk(pos.x, pos.z, ChunkStatus.FULL, false);
                 if (access instanceof LevelChunk chunk) {
                     scanned++;
@@ -364,9 +329,6 @@ public final class AdminCommands {
         return result.decayAdded() + result.refreshAdded();
     }
 
-    // ------------------------------------------------------------------ P2-6: open_as
-
-    /** Whose loot to show: the loot key, a name for the title, and whether team loot makes an offline lookup unreliable. */
     private record Key(UUID id, String label, boolean offlineWithTeamLoot) {}
 
     @FunctionalInterface
@@ -374,7 +336,6 @@ public final class AdminCommands {
         Key resolve(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException;
     }
 
-    /** Adds {@code block <pos>} and {@code entity <target>} below {@code parent}; same convention as the other commands. */
     private static void withTargets(ArgumentBuilder<CommandSourceStack, ?> parent, KeyResolver resolver) {
         parent.then(Commands.literal("block")
                 .then(Commands.argument("pos", BlockPosArgument.blockPos())
@@ -400,15 +361,10 @@ public final class AdminCommands {
         }
         GameProfile profile = profiles.iterator().next();
         ServerPlayer online = ctx.getSource().getServer().getPlayerList().getPlayer(profile.getId());
-        // With team loot on, the loot key is the team's, which can only be resolved for an online player.
         UUID id = online != null ? TeamResolver.resolve(online) : profile.getId();
         return new Key(id, profile.getName(), online == null && LootrConfig.teamLoot());
     }
 
-    /**
-     * A loaded COPY of the object's saved loot state (Fabric keeps it as a raw tag), or null if it has none. A
-     * copy is exactly what a read-only view needs: nothing is written back.
-     */
     @Nullable
     private static LootrLootState stateOf(@Nullable Object holder, ServerLevel level) {
         CompoundTag tag = null;
@@ -425,13 +381,6 @@ public final class AdminCommands {
         return state;
     }
 
-    /**
-     * Shows the admin a read-only copy of {@code key}'s entry in a chest, trapped chest, barrel, shulker box or
-     * chest minecart. Never rolls loot: a key with no entry is refused, so the target's first open is untouched
-     * and no {@code generate_loot} trigger, advancement or stat is credited. Does not go through
-     * {@code OpenTracker}, so the real block does not animate or signal a comparator for a look that changes
-     * nothing.
-     */
     private static int openAs(CommandSourceStack source, Key key, @Nullable Object holder, String what) {
         ServerPlayer admin = source.getPlayer();
         if (admin == null) {
@@ -465,7 +414,6 @@ public final class AdminCommands {
         return 1;
     }
 
-    /** A chest menu whose every click is ignored, so nothing can be taken from or put into the copy. */
     private static final class ViewOnlyChestMenu extends ChestMenu {
         ViewOnlyChestMenu(int id, Inventory inventory, Container view) {
             super(MenuType.GENERIC_9x3, id, inventory, view, 3);
@@ -473,7 +421,6 @@ public final class AdminCommands {
 
         @Override
         public void clicked(int slotId, int button, ClickType clickType, Player player) {
-            // view only: includes shift-click, number-key swap, drag, double-click and throw
         }
 
         @Override
@@ -482,7 +429,6 @@ public final class AdminCommands {
         }
     }
 
-    /** Shulker twin of {@link ViewOnlyChestMenu}. */
     private static final class ViewOnlyShulkerMenu extends ShulkerBoxMenu {
         ViewOnlyShulkerMenu(int id, Inventory inventory, Container view) {
             super(id, inventory, view);
@@ -490,7 +436,6 @@ public final class AdminCommands {
 
         @Override
         public void clicked(int slotId, int button, ClickType clickType, Player player) {
-            // view only
         }
 
         @Override
