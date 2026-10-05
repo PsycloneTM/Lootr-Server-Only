@@ -1,0 +1,27 @@
+{
+  "parent": "lootr_serveronly:root",
+  "display": {
+    "icon": {
+      "id": "minecraft:shulker_box",
+      "count": 1
+    },
+    "title": {
+      "text": "Boxed Bounty"
+    },
+    "description": {
+      "text": "Open your first Lootr shulker box!"
+    },
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "opened": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "opened"
+    ]
+  ]
+}

@@ -1,0 +1,32 @@
+plugins {
+    id 'fabric-loom'
+}
+
+loom {
+
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${minecraft_version}"
+
+    mappings loom.officialMojangMappings()
+    modImplementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
+
+    modImplementation include(fabricApi.module("fabric-data-attachment-api-v1", fabric_api_version))
+
+    modImplementation include(fabricApi.module("fabric-events-interaction-v0", fabric_api_version))
+
+    modImplementation include(fabricApi.module("fabric-command-api-v2", fabric_api_version))
+
+    annotationProcessor "io.github.llamalad7:mixinextras-common:${mixin_extras_version}"
+    implementation "io.github.llamalad7:mixinextras-fabric:${mixin_extras_version}"
+}
+
+dependencies {
+    compileOnly project(':common')
+    runtimeOnly project(':common')
+}
+
+tasks.named('jar') {
+    from project(':common').sourceSets.main.output
+}

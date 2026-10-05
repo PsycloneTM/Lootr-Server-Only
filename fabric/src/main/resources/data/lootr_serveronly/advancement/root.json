@@ -1,0 +1,26 @@
+{
+  "display": {
+    "icon": {
+      "id": "minecraft:chest",
+      "count": 1
+    },
+    "title": {
+      "text": "Lootr"
+    },
+    "description": {
+      "text": "Loot that's yours alone. Every player gets their own."
+    },
+    "show_toast": false,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "always_true": {
+      "trigger": "minecraft:tick"
+    }
+  },
+  "requirements": [
+    [
+      "always_true"
+    ]
+  ]
+}
