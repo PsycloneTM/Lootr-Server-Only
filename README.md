@@ -105,14 +105,14 @@ Everything else, with all keys, defaults and the exact break rules, is in
 | `/lootr reset` / `reset block <pos>` / `reset entity <target>` | Forget everyone's loot so the next open rolls fresh |
 | `/lootr id`, `refresh`, `decay` (same three forms) | Show the container's Lootr id; force a refresh or a decay now |
 | `/lootr clear <players>` | Let those players loot everything again |
-| `/lootr openers` (same three forms) | Everyone who has opened it (kept across refresh/reset), plus how many are viewing now |
+| `/lootr openers`, `openers <pos>`, `openers block <pos>`, `openers entity <target>` | Everyone who has opened it (kept across refresh/reset), plus how many are viewing now |
 | `/lootr frame mark\|unmark <target>` | Make an item frame a loot frame, or stop it being one |
 | `/lootr chest\|barrel\|trapped_chest\|shulker\|pot\|gravel\|sand\|cart [<table>]` | Create a loot container at your position |
 | `/lootr open_as <player>` / `open_as_uuid <uuid>` (optionally followed by `block <pos>` or `entity <target>`) | View what a player has left in a container, read-only |
 | `/lootr force_chunk\|force_radius\|force_all` | Run the chunk discovery scan for decay/refresh on demand; also re-queues tracked containers that were waiting for their chunk to load |
 | `/lootr reload` | Fabric only: re-read the config file |
 
-Commands act on the container you are standing on (the block at your feet or the one below, or a chest minecart within a block), like upstream. The `block <pos>` and `entity <target>` forms still work but are deprecated and print a warning; they may be removed.
+Commands act on the container you are standing on (the block at your feet or the one below, or a chest minecart within a block), like upstream. The `block <pos>` and `entity <target>` forms target a specific container instead, which is what you need from the console, a command block, or when you are not next to it. `/lootr openers <pos>` is also accepted, as in upstream.
 
 Not implemented: `custom-chest`, `custom-area` and `custom-map`, which depend on upstream's custom inventories (they need a custom block, so no server-only equivalent). `/lootr refresh` and `/lootr decay` are marked deprecated in upstream's wiki. They are kept here, but they behave differently: upstream starts the container's refresh or decay timer with the full configured delay, while here they act immediately (or as soon as the last viewer closes the menu). They still require the refresh or decay setting to cover that container.
 
