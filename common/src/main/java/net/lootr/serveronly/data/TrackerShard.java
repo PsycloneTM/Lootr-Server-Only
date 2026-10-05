@@ -15,7 +15,7 @@ public final class TrackerShard extends SavedData {
 
     public final DueIndex index = new DueIndex(TrackerShard::chunkKey);
     public int generation;
-    /** How much of {@code TrackerIndex.shiftTotal} this shard's stored deadlines already include. */
+
     public long appliedShift;
 
     public static long chunkKey(long packedPos) {

@@ -409,7 +409,7 @@ public final class LootrCommands {
             table = cart.getLootTable();
             level = cart.level();
         } else if (holder instanceof DecoratedPotBlockEntity || holder instanceof BrushableBlockEntity) {
-            return 0; // pots and brushables never refresh, as upstream
+            return 0;
         } else {
             return LootrSettings.refreshTicks();
         }

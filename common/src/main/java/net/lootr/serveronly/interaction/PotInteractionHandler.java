@@ -79,7 +79,7 @@ public final class PotInteractionHandler {
         LootrLootState state = LootStateStore.getOrCreate(pot, level);
 
         UUID lootKey = TeamResolver.resolve(player);
-        // Upstream Lootr never refreshes (or decays) decorated pots: PotLootrType.canRefresh()/canDecay() are false.
+
         if (state.hasGeneratedFor(lootKey)) {
             level.playSound(null, pos, SoundEvents.DECORATED_POT_INSERT_FAIL, SoundSource.BLOCKS, 1.0F, 1.0F);
             pot.wobble(DecoratedPotBlockEntity.WobbleStyle.NEGATIVE);

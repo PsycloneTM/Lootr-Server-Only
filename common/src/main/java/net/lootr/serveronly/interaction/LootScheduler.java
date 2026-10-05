@@ -9,15 +9,6 @@ import net.lootr.serveronly.data.RefreshTracker;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 
-/**
- * The single entry point for background decay and refresh, called from each loader's server tick.
- * One pass handles blocks (all decay, then all refresh, so decay wins when both are due) and then
- * chest minecarts.
- *
- * <p>Decay and refresh stay separate operations ({@link Decay}, {@link Refresh}), each with its own
- * saved tracker, so the save format is unchanged. They share the sweep loop in {@link BlockSweep}
- * and the deadline arithmetic in {@code LootSchedule}, and failures are logged in one place.
- */
 public final class LootScheduler {
     private static boolean failureLogged;
 

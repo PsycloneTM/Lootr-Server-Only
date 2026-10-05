@@ -52,7 +52,7 @@ public final class MinecartInteractionHandler {
         LootrLootState state = LootStateStore.getOrCreate(cart, level);
 
         UUID lootKey = TeamResolver.resolve(player);
-        // Decay-first precedence, matching the background sweep: if decay is due, refresh never runs.
+
         if (Decay.decayIfDue(level, cart, state)) {
             return;
         }
@@ -156,7 +156,7 @@ public final class MinecartInteractionHandler {
 
     public static List<ItemStack> takeLoot(ServerPlayer player, MinecartChest cart, ServerLevel level) {
         LootrLootState state = LootStateStore.getOrCreate(cart, level);
-        // Decay-first, as on open (and as upstream does for every player access): a decayed cart yields nothing.
+
         if (Decay.decayIfDue(level, cart, state)) {
             return new ArrayList<>();
         }

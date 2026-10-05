@@ -18,11 +18,10 @@ public final class TrackerIndex extends SavedData {
     private static final String TAG_SETTING = "setting";
     private static final String TAG_SHIFT_TOTAL = "shift_total";
 
-    /** Region to earliest due time, per dimension. Persisted as lists; ordered in memory. */
     public final RegionQueue queue = new RegionQueue();
-    /** Legacy: only read so old save data keeps working. Nothing increments it any more. */
+
     public int generation;
-    /** Total ticks that stored deadlines have been pulled earlier because a setting got shorter. */
+
     public long shiftTotal;
     public long setting = Long.MIN_VALUE;
 

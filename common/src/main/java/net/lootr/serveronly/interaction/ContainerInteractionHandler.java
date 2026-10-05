@@ -89,7 +89,7 @@ public final class ContainerInteractionHandler {
         LootrLootState state = LootStateStore.getOrCreate(entity, level);
 
         java.util.UUID lootKey = TeamResolver.resolve(player);
-        // Decay-first precedence, matching the background sweep: if decay is due, refresh never runs.
+
         if (Decay.decayIfDue(level, entity, state)) {
             return false;
         }
@@ -174,7 +174,7 @@ public final class ContainerInteractionHandler {
     public static java.util.List<ItemStack> takeLoot(ServerPlayer player, RandomizableContainerBlockEntity entity,
                                                       ServerLevel level) {
         LootrLootState state = LootStateStore.getOrCreate(entity, level);
-        // Decay-first, as on open (and as upstream does for every player access): a decayed container yields nothing.
+
         if (Decay.decayIfDue(level, entity, state)) {
             return new java.util.ArrayList<>();
         }

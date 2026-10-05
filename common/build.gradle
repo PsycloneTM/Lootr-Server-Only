@@ -16,7 +16,6 @@ dependencies {
     compileOnly "org.jetbrains:annotations:24.1.0"
 }
 
-// Pure-logic unit tests (no Minecraft runtime needed). Run with: ./gradlew :common:test
 dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter:5.10.2"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:1.10.2"

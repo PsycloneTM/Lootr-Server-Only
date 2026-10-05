@@ -9,27 +9,14 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.TreeMap;
 
-/**
- * Per-dimension index of regions ordered by their earliest due time.
- *
- * <p>Each region maps to the minimum due time of the entries inside its shard. The index keeps that
- * value in two synchronised views: a lookup map (region to due time) and a sorted map (due time to the
- * regions due then). {@link #takeDue} therefore touches only the regions whose deadline has passed,
- * instead of scanning every region on each sweep.
- *
- * <p>This class has no Minecraft dependencies so it can be unit-tested directly. The persisted form in
- * {@link TrackerIndex} is unchanged: it is written from {@link #entries} and rebuilt with {@link #put}.
- */
 public final class RegionQueue {
     private final Map<String, Map<Long, Long>> dueByRegion = new HashMap<>();
     private final Map<String, TreeMap<Long, Set<Long>>> regionsByDue = new HashMap<>();
 
-    /** The dimensions that currently have at least one region. */
     public Set<String> dimensions() {
         return new HashSet<>(dueByRegion.keySet());
     }
 
-    /** Region to due time for one dimension, in insertion-independent order. Empty if none. */
     public Map<Long, Long> entries(String dimension) {
         Map<Long, Long> map = dueByRegion.get(dimension);
         return map == null ? new LinkedHashMap<>() : new LinkedHashMap<>(map);
@@ -40,16 +27,11 @@ public final class RegionQueue {
         return map != null && map.containsKey(region);
     }
 
-    /** The stored due time for the region, or {@code null} if the region is not indexed. */
     public Long get(String dimension, long region) {
         Map<Long, Long> map = dueByRegion.get(dimension);
         return map == null ? null : map.get(region);
     }
 
-    /**
-     * Sets the region's due time, replacing any previous value. Returns the previous value, or
-     * {@code null} if the region was not indexed before.
-     */
     public Long put(String dimension, long region, long due) {
         Map<Long, Long> map = dueByRegion.computeIfAbsent(dimension, k -> new HashMap<>());
         TreeMap<Long, Set<Long>> ordered = regionsByDue.computeIfAbsent(dimension, k -> new TreeMap<>());
@@ -61,7 +43,6 @@ public final class RegionQueue {
         return old;
     }
 
-    /** Removes the region. Returns {@code true} if it was indexed. */
     public boolean remove(String dimension, long region) {
         Map<Long, Long> map = dueByRegion.get(dimension);
         if (map == null) {
@@ -79,11 +60,6 @@ public final class RegionQueue {
         return true;
     }
 
-    /**
-     * Removes and returns every region in the dimension whose due time is at or before {@code now}, in
-     * due-time order. Callers re-insert a region with {@link #put} (or drop it with {@link #remove})
-     * once they have processed it.
-     */
     public List<Long> takeDue(String dimension, long now) {
         List<Long> out = new ArrayList<>();
         TreeMap<Long, Set<Long>> ordered = regionsByDue.get(dimension);
@@ -105,10 +81,6 @@ public final class RegionQueue {
         return out;
     }
 
-    /**
-     * Pulls every region's due time {@code delta} ticks earlier, in memory only. Used when a duration
-     * setting gets shorter. No shard is read or written here.
-     */
     public void shiftEarlier(long delta) {
         if (delta <= 0) {
             return;

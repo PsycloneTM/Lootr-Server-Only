@@ -52,7 +52,7 @@ class RegionQueueTest {
         assertNull(q.put(OVERWORLD, 1L, 500L));
         assertEquals(500L, (long) q.put(OVERWORLD, 1L, 100L));
         assertEquals(100L, (long) q.get(OVERWORLD, 1L));
-        // Only one entry, and it is due at 100 (not also at 500).
+
         assertTrue(q.takeDue(OVERWORLD, 499L).equals(List.of(1L)));
         assertTrue(q.takeDue(OVERWORLD, 10_000L).isEmpty());
     }
@@ -90,7 +90,7 @@ class RegionQueueTest {
         q.put(OVERWORLD, 2L, 5_000L);
         q.put(NETHER, 3L, 9_000L);
         q.shiftEarlier(400L);
-        // Regression guard for the old syncSetting: nothing may become due just because a setting changed.
+
         assertTrue(q.takeDue(OVERWORLD, 599L).isEmpty());
         assertEquals(Long.valueOf(600L), q.get(OVERWORLD, 1L));
         assertEquals(Long.valueOf(4_600L), q.get(OVERWORLD, 2L));
@@ -116,8 +116,8 @@ class RegionQueueTest {
         q.put(OVERWORLD, 1L, 100L);
         q.put(OVERWORLD, 2L, 100L);
         q.put(OVERWORLD, 3L, 700L);
-        q.shiftEarlier(50L);                 // 1 and 2 -> 50, 3 -> 650
-        q.put(OVERWORLD, 3L, 640L);          // replace after a shift: must not leave a stale 650 behind
+        q.shiftEarlier(50L);
+        q.put(OVERWORLD, 3L, 640L);
         assertTrue(q.takeDue(OVERWORLD, 49L).isEmpty());
         assertEquals(2, q.takeDue(OVERWORLD, 50L).size());
         assertTrue(q.takeDue(OVERWORLD, 639L).isEmpty());
@@ -137,10 +137,6 @@ class RegionQueueTest {
         assertTrue(q.entries(NETHER).isEmpty());
     }
 
-    /**
-     * Model-based check: applies random operations to the queue and to a naive map that scans every
-     * entry (the old behaviour), and requires the same results for every query.
-     */
     @Test
     void matchesNaiveModelUnderRandomOperations() {
         Random rng = new Random(20241008L);

@@ -64,7 +64,6 @@ public final class Refresh {
         return LootrSettings.performRefreshWhileTicking() && LootrSettings.refreshTicks() > 0;
     }
 
-    /** Decides what to do with a due container: refresh it, wait for viewers, or look again later. */
     static long decideBlock(ServerLevel level, BlockPos pos, RandomizableContainerBlockEntity container, long now) {
         long first = LootStateStore.firstGenerated(container);
         int ticks = LootrSettings.refreshTicksFor(level, pos, container.getLootTable());

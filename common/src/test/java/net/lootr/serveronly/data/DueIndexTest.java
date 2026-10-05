@@ -9,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DueIndexTest {
-    /** Chunk key is the position divided by 16, which is enough for these tests. */
     private static DueIndex index() {
         return new DueIndex(pos -> pos >> 4);
     }
@@ -40,8 +39,8 @@ class DueIndexTest {
     @Test
     void parkedEntriesAreNotTakenUntilTheirChunkWakes() {
         DueIndex idx = index();
-        idx.put(5, DueIndex.PARKED);      // chunk 0
-        idx.put(100, DueIndex.PARKED);    // chunk 6
+        idx.put(5, DueIndex.PARKED);
+        idx.put(100, DueIndex.PARKED);
         assertTrue(idx.takeDue(Long.MAX_VALUE - 1).isEmpty());
         assertEquals(1, idx.wakeChunk(0L, 777));
         assertEquals(List.of(5L), idx.takeDue(777));
@@ -83,8 +82,6 @@ class DueIndexTest {
 
     @Test
     void shiftingInTwoStepsEqualsOneShiftByTheTotal() {
-        // A shard that missed two setting changes catches up with their sum. This must give the same
-        // result as having been shifted at each change.
         for (long due : new long[] {0L, 50L, 300L, 301L, 10_000L}) {
             DueIndex stepwise = index();
             DueIndex once = index();

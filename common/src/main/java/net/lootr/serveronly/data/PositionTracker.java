@@ -52,7 +52,6 @@ public final class PositionTracker {
     }
 
     public List<BlockPos> takeDue(ResourceKey<Level> dimension, long now) {
-        // Only regions whose earliest deadline has passed are visited; the rest are not scanned.
         List<BlockPos> out = new ArrayList<>();
         for (long region : index.queue.takeDue(id(dimension), now)) {
             TrackerShard shard = shard(dimension, region);
@@ -102,8 +101,6 @@ public final class PositionTracker {
         long previous = index.setting;
         index.setting = setting;
         if (previous != Long.MIN_VALUE && setting < previous) {
-            // A shorter duration can make stored deadlines too late, so pull them earlier. A longer one
-            // only makes them early, and the sweep reschedules an early entry when it fires.
             long delta = previous - setting;
             index.shiftTotal += delta;
             index.queue.shiftEarlier(delta);
@@ -130,7 +127,6 @@ public final class PositionTracker {
         String name = prefix + "_" + fileSafe(dimension) + "_" + (int) (region >> 32) + "_" + (int) region;
         TrackerShard shard = storage.computeIfAbsent(factory(TrackerShard::new, TrackerShard::load), name);
         if (shard.generation != index.generation) {
-            // Save data written before deadline shifting existed: wake it once, as the old code did.
             shard.index.wakeAll(0L);
             shard.generation = index.generation;
             shard.setDirty();

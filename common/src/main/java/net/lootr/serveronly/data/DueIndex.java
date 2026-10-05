@@ -109,7 +109,6 @@ public final class DueIndex {
         }
     }
 
-    /** Pulls every stored due time {@code delta} ticks earlier. See {@code LootSchedule.shiftEarlier}. */
     public void shiftEarlier(long delta) {
         if (delta <= 0) {
             return;

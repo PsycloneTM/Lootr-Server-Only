@@ -8,14 +8,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-/**
- * An in-memory set of keys ordered by deadline. Each key has at most one deadline; {@link #put}
- * replaces it. Finding what is due costs time proportional to the number of due keys, not the
- * number of tracked keys.
- *
- * <p>This class has no Minecraft dependencies so it can be unit-tested directly. It is not
- * thread-safe; callers use it from the server thread only.
- */
 public final class DeadlineQueue<K> {
     private final Map<K, Long> dueOf = new HashMap<>();
     private final TreeMap<Long, Set<K>> byDue = new TreeMap<>();
@@ -32,12 +24,10 @@ public final class DeadlineQueue<K> {
         return dueOf.containsKey(key);
     }
 
-    /** The earliest deadline, or {@link LootSchedule#NO_DEADLINE} when empty. */
     public long peekDue() {
         return byDue.isEmpty() ? LootSchedule.NO_DEADLINE : byDue.firstKey();
     }
 
-    /** Sets {@code key}'s deadline, replacing any earlier one. */
     public void put(K key, long due) {
         Long old = dueOf.put(key, due);
         if (old != null) {
@@ -63,7 +53,6 @@ public final class DeadlineQueue<K> {
         byDue.clear();
     }
 
-    /** Removes and returns every key whose deadline is at or before {@code now}, earliest first. */
     public List<K> pollDue(long now) {
         List<K> out = new ArrayList<>();
         while (!byDue.isEmpty() && byDue.firstKey() <= now) {

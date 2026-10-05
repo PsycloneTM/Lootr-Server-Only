@@ -133,7 +133,6 @@ public final class Decay {
         return LootrSettings.decayTicks() > 0 && LootrSettings.performDecayWhileTicking();
     }
 
-    /** Decides what to do with a due container: decay it, wait for viewers, or look again later. */
     static long decideBlock(ServerLevel level, BlockPos pos, RandomizableContainerBlockEntity container, long now) {
         long left = ticksLeft(level, pos, LootStateStore.firstGenerated(container), container.getLootTable(), now);
         LootSchedule.Step step = LootSchedule.decayStep(left, now);
@@ -180,7 +179,6 @@ public final class Decay {
         return OpenTracker.isViewed(level, owner);
     }
 
-    /** True if this player's open menu is a Lootr view of {@code owner}. */
     static boolean isShowing(ServerPlayer player, Object owner) {
         AbstractContainerMenu menu = player.containerMenu;
         return menu != null && !menu.slots.isEmpty()

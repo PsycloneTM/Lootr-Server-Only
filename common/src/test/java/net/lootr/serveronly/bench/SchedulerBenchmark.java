@@ -13,25 +13,11 @@ import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 
-/**
- * Phase 0 benchmark: the pure scheduling structures against the naive scans they replaced.
- * No Minecraft and no JUnit needed. Run with:
- *
- * <pre>
- *   ./gradlew :common:testClasses
- *   java -cp common/build/classes/java/main:common/build/classes/java/test \
- *        net.lootr.serveronly.bench.SchedulerBenchmark [quick]
- * </pre>
- *
- * <p>Each case reports the median nanoseconds per operation over several timed rounds, after a
- * warm-up. The "naive" rows reproduce the old behaviour: look at every tracked item on every sweep.
- * Numbers are only meaningful relative to each other on one machine; this is not JMH.
- */
 public final class SchedulerBenchmark {
     private static final String DIM = "minecraft:overworld";
     private static final long FAR = 1_000_000_000L;
     private static boolean quick;
-    private static long sink; // defeats dead-code elimination
+    private static long sink;
 
     public static void main(String[] args) {
         quick = args.length > 0 && args[0].equals("quick");
@@ -78,8 +64,6 @@ public final class SchedulerBenchmark {
         System.out.println();
         System.out.println("(sink " + sink + ")");
     }
-
-    // ---- 1. idle -------------------------------------------------------------------------------
 
     private static void idleRegionQueue(int regions) {
         RegionQueue q = new RegionQueue();
@@ -155,8 +139,6 @@ public final class SchedulerBenchmark {
         }));
     }
 
-    // ---- 2. churn ------------------------------------------------------------------------------
-
     private static void churnRegionQueue(int regions) {
         RegionQueue q = new RegionQueue();
         long[] dues = new long[regions];
@@ -167,7 +149,7 @@ public final class SchedulerBenchmark {
             q.put(DIM, i, dues[i]);
             naive.put((long) i, dues[i]);
         }
-        // Each "sweep" advances time so about 1% of regions are due, then reschedules them.
+
         long[] clock = {0};
         row("RegionQueue take+reschedule", regions, time(() -> {
             clock[0] += 1;
@@ -215,8 +197,6 @@ public final class SchedulerBenchmark {
         }));
     }
 
-    // ---- 3. parked / wake ----------------------------------------------------------------------
-
     private static void wakeChunk(int positions) {
         DueIndex idx = new DueIndex(p -> p >> 4);
         Map<Long, Long> naive = new HashMap<>();
@@ -229,7 +209,7 @@ public final class SchedulerBenchmark {
         row("DueIndex.wakeChunk", positions, time(() -> {
             long c = chunk[0]++ % chunks;
             sink += idx.wakeChunk(c, 5L);
-            // park them again so every round does the same work
+
             for (long p = c * 16; p < c * 16 + 16 && p < positions; p++) {
                 idx.put(p, LootSchedule.PARKED);
             }
@@ -247,8 +227,6 @@ public final class SchedulerBenchmark {
         }));
     }
 
-    // ---- 4. shift ------------------------------------------------------------------------------
-
     private static void shift(int n) {
         RegionQueue q = new RegionQueue();
         DueIndex idx = new DueIndex(p -> p >> 4);
@@ -260,8 +238,6 @@ public final class SchedulerBenchmark {
         row("RegionQueue.shiftEarlier(1)", n, time(() -> q.shiftEarlier(1)));
         row("DueIndex.shiftEarlier(1)", n, time(() -> idx.shiftEarlier(1)));
     }
-
-    // ---- 5. build ------------------------------------------------------------------------------
 
     private static void build(int n) {
         Random r = new Random(7);
@@ -290,8 +266,6 @@ public final class SchedulerBenchmark {
         return time(() -> sink += idx.snapshot()[0].length);
     }
 
-    // ---- harness -------------------------------------------------------------------------------
-
     private static long time(Runnable op) {
         int warm = quick ? 20 : 200;
         int rounds = quick ? 5 : 9;
@@ -299,7 +273,7 @@ public final class SchedulerBenchmark {
         for (int i = 0; i < warm && System.nanoTime() < warmEnd; i++) {
             op.run();
         }
-        // Pick an iteration count so a round lasts roughly 20ms.
+
         long t0 = System.nanoTime();
         int probe = 0;
         while (System.nanoTime() - t0 < 5_000_000L && probe < 1_000_000) {

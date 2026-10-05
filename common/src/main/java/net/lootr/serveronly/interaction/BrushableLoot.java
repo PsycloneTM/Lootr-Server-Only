@@ -88,7 +88,6 @@ public final class BrushableLoot {
         }
     }
 
-    // Upstream Lootr never refreshes (or decays) brushable blocks: BrushableLootrType.canRefresh()/canDecay() are false.
     private static LootrLootState stateOf(BrushableBlockEntity be, ServerLevel level) {
         return LootStateStore.getOrCreate(be, level);
     }

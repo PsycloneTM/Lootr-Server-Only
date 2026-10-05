@@ -60,7 +60,6 @@ public final class OpenTracker {
         return BLOCKS.count(new Key(level.dimension(), pos));
     }
 
-    /** Chest minecarts have no block to animate, so they are only tracked, never applied. */
     public static void openedCart(ServerLevel level, Entity cart, Player player) {
         CARTS.add(cart.getUUID(), player.getUUID(), online(level.getServer()));
     }
@@ -69,11 +68,6 @@ public final class OpenTracker {
         CARTS.remove(cart.getUUID(), player.getUUID(), online(level.getServer()));
     }
 
-    /**
-     * True if a player has this owner's menu open. Asks the registry first, so a target nobody has
-     * opened is answered without touching any player. Registered viewers are then checked against
-     * what they actually have open, so a missed close can never block decay or refresh for good.
-     */
     public static boolean isViewed(ServerLevel level, Object owner) {
         Set<UUID> ids;
         if (owner instanceof BlockEntity blockEntity) {

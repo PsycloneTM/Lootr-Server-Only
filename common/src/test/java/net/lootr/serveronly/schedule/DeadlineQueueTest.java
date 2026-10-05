@@ -86,7 +86,6 @@ class DeadlineQueueTest {
         assertEquals(LootSchedule.NO_DEADLINE, q.peekDue());
     }
 
-    /** Random operations compared against a naive map that scans everything. */
     @Test
     void matchesANaiveModelUnderRandomOperations() {
         Random rng = new Random(12345);

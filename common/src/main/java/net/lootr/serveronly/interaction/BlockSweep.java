@@ -10,17 +10,10 @@ import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
 
 import java.util.function.Consumer;
 
-/**
- * The part of a block sweep that decay and refresh share: take what is due, skip what cannot be
- * acted on yet (unloaded chunk, outside the world border, no longer a Lootr container), and
- * contain failures. What to do with a container that is really there is left to a {@link Handler}.
- */
 final class BlockSweep {
-    /** Returned by a handler that has finished with the position and wants it dropped from the tracker. */
     static final long DONE = Long.MIN_VALUE;
 
     interface Handler {
-        /** Returns {@link #DONE}, or the game time at which this position should be looked at again. */
         long handle(ServerLevel level, BlockPos pos, RandomizableContainerBlockEntity container, long now);
     }
 

@@ -7,9 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LootScheduleTest {
-
-    // --- refresh ---
-
     @Test
     void refreshNotDueWithoutTimer() {
         assertFalse(LootSchedule.isRefreshDue(1_000_000L, -1L, 100L));
@@ -47,8 +44,6 @@ class LootScheduleTest {
         assertEquals(LootSchedule.NO_DEADLINE, LootSchedule.refreshDueAt(0L, 0L));
     }
 
-    // --- decay ---
-
     @Test
     void decayTicksLeftReportsInactiveTimer() {
         assertEquals(-1L, LootSchedule.decayTicksLeft(-1L, 100L, 50L));
@@ -71,12 +66,6 @@ class LootScheduleTest {
         assertEquals(300L, LootSchedule.decayDueAt(200L, 100L));
     }
 
-    // --- equivalence with the pre-refactor arithmetic ---
-
-    /**
-     * The old code computed refresh as {@code now - first >= ticks} and decay as
-     * {@code max(0, first + decay - now)}. The new helpers must agree with both over a range of inputs.
-     */
     @Test
     void matchesLegacyArithmetic() {
         long[] firsts = {0L, 1L, 100L, 12_345L};
