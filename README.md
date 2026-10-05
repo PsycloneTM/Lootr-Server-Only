@@ -114,7 +114,7 @@ Everything else, with all keys, defaults and the exact break rules, is in
 
 Commands act on the container you are standing on (the block at your feet or the one below, or a chest minecart within a block), like upstream. The `block <pos>` and `entity <target>` forms still work but are deprecated and print a warning; they may be removed.
 
-Not implemented: `custom-chest`, `custom-area` and `custom-map`, which depend on upstream's custom inventories (they need a custom block, so no server-only equivalent). `refresh` and `decay` are deprecated upstream but work here.
+Not implemented: `custom-chest`, `custom-area` and `custom-map`, which depend on upstream's custom inventories (they need a custom block, so no server-only equivalent). `/lootr refresh` and `/lootr decay` are marked deprecated in upstream's wiki. They are kept here, but they behave differently: upstream starts the container's refresh or decay timer with the full configured delay, while here they act immediately (or as soon as the last viewer closes the menu). They still require the refresh or decay setting to cover that container.
 
 Full details in [Commands](../../wiki/Commands).
 
