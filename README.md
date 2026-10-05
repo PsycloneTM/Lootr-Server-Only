@@ -1,4 +1,4 @@
-# Lootr (Server-Only)
+# Lootr (Server-Only) (Unofficial)
 
 ![Minecraft 1.21.1](https://img.shields.io/badge/Minecraft-1.21.1-62b47a)
 ![NeoForge](https://img.shields.io/badge/NeoForge-21.1.219%2B-e68c2c)
