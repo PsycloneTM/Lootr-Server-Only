@@ -341,7 +341,6 @@ public final class AdminCommands {
         parent.then(Commands.literal("block")
                 .then(Commands.argument("pos", BlockPosArgument.blockPos())
                         .executes(ctx -> {
-                            LootrCommands.warnDeprecated(ctx.getSource());
                             Key key = resolver.resolve(ctx);
                             ServerLevel level = ctx.getSource().getLevel();
                             return openAs(ctx.getSource(), key,
@@ -350,7 +349,6 @@ public final class AdminCommands {
         parent.then(Commands.literal("entity")
                 .then(Commands.argument("target", EntityArgument.entity())
                         .executes(ctx -> {
-                            LootrCommands.warnDeprecated(ctx.getSource());
                             Key key = resolver.resolve(ctx);
                             return openAs(ctx.getSource(), key, EntityArgument.getEntity(ctx, "target"), "that entity");
                         })));

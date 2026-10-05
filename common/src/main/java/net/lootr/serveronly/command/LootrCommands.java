@@ -47,7 +47,7 @@ public final class LootrCommands {
                 .requires(source -> source.hasPermission(2))
                 .executes(ctx -> {
                     ctx.getSource().sendSuccess(() -> Component.literal("Usage: /lootr <chest|barrel|trapped_chest|shulker|pot|gravel|sand|cart> [table], "
-                            + "info|reset|refresh|decay|id|openers [block <pos>|entity <target>], clear|cclear <players>, "
+                            + "info|reset|refresh|decay|id|openers [block <pos>|entity <target>], openers <pos>, clear|cclear <players>, "
                             + "open_as <player>|open_as_uuid <uuid>, force_chunk|force_radius <r>|force_all, frame mark|unmark <target>"), false);
                     return 1;
                 })
@@ -109,6 +109,9 @@ public final class LootrCommands {
                                 .executes(ctx -> clear(ctx.getSource(), EntityArgument.getPlayers(ctx, "players")))))
                 .then(Commands.literal("openers")
                         .executes(ctx -> openers(ctx.getSource(), ctx.getSource().getLevel(), standing(ctx), "the container you are standing on"))
+                        .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                                .executes(ctx -> openers(ctx.getSource(), ctx.getSource().getLevel(),
+                                        blockAt(ctx), "that block")))
                         .then(Commands.literal("block")
                                 .then(Commands.argument("pos", BlockPosArgument.blockPos())
                                         .executes(ctx -> openers(ctx.getSource(), ctx.getSource().getLevel(),
@@ -318,21 +321,12 @@ public final class LootrCommands {
         return reset(source, holder, "the container you are standing on", holder instanceof Entity e ? e : null);
     }
 
-    static final String DEPRECATED = "The block <pos> / entity <target> forms are deprecated and may be removed; "
-            + "stand on the container and run the command with no target instead.";
-
-    static void warnDeprecated(CommandSourceStack source) {
-        source.sendSuccess(() -> Component.literal(DEPRECATED).withStyle(net.minecraft.ChatFormatting.YELLOW), false);
-    }
-
     private static Entity entityTarget(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-        warnDeprecated(ctx.getSource());
         return EntityArgument.getEntity(ctx, "target");
     }
 
     @Nullable
     private static BlockEntity blockAt(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-        warnDeprecated(ctx.getSource());
         return ctx.getSource().getLevel().getBlockEntity(BlockPosArgument.getLoadedBlockPos(ctx, "pos"));
     }
 
